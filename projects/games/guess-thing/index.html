@@ -135,7 +135,7 @@ async function startGame() {
     moreDescBtn.disabled = false;
     // 请求AI生成物品和第一条描述
     try {
-        const sysPrompt = "你是一个猜物品游戏的AI助手。请你随机选择一个常见物品（如：苹果、手机、书、椅子等），不要告诉用户答案。每次用户请求时，只给出一条关于该物品的简短描述，描述要有一定隐晦性，避免直接暴露答案。";
+        const sysPrompt = "你是一个猜物品游戏的AI助手。请你随机选择一个物品（两到三个字），不要告诉用户答案。每次用户请求时，只给出一条关于该物品的简短描述，描述要有一定隐晦性，避免直接暴露答案。";
         // 第一次请求，AI需返回物品和第一条描述
         const userPrompt = "请生成一个物品，并给出第一条描述。返回格式：物品：xxx\n描述：yyy";
         const firstMsg = [
