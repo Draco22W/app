@@ -6,15 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
     <style>
         :root {
-            --primary: #4f8cff;
-            --primary-dark: #2563eb;
-            --bg: #f7f9fb;
+            --primary: #2563eb;
+            --primary-light: #4f8cff;
+            --bg: #f6f8fa;
             --card-bg: #fff;
             --border: #e5e7eb;
-            --radius: 18px;
-            --shadow: 0 4px 24px rgba(79,140,255,0.08);
+            --radius: 20px;
+            --shadow: 0 4px 24px rgba(37,99,235,0.08);
             --text-main: #222;
-            --text-sub: #666;
+            --text-sub: #6b7280;
             --success: #22c55e;
             --error: #ef4444;
         }
@@ -23,69 +23,95 @@
             padding: 0;
             background: var(--bg);
             color: var(--text-main);
-            font-family: 'Segoe UI', 'PingFang SC', 'Hiragino Sans', Arial, sans-serif;
+            font-family: 'Inter', 'Segoe UI', 'PingFang SC', 'Hiragino Sans', Arial, sans-serif;
             min-height: 100vh;
         }
         .container {
             background: var(--card-bg);
-            margin: 32px auto 0 auto;
-            padding: 28px 20px 24px 20px;
+            margin: 40px auto 0 auto;
+            padding: 32px 28px 28px 28px;
             border-radius: var(--radius);
             box-shadow: var(--shadow);
-            max-width: 400px;
+            max-width: 420px;
             width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            gap: 22px;
+            position: relative;
+        }
+        .feature-btn {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            background: var(--primary-light);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(37,99,235,0.10);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .feature-btn:active {
+            background: var(--primary);
         }
         h1 {
             text-align: center;
-            font-size: 2rem;
-            font-weight: 700;
+            font-size: 2.1rem;
+            font-weight: 800;
             margin: 0 0 8px 0;
             letter-spacing: 2px;
+            color: var(--primary);
         }
         .desc-list {
             background: #f1f5f9;
-            border-radius: 12px;
-            padding: 16px 12px;
+            border-radius: 16px;
+            padding: 18px 14px;
             min-height: 60px;
             margin-bottom: 0;
-            font-size: 1.08rem;
+            font-size: 1.12rem;
             box-shadow: 0 1px 4px rgba(0,0,0,0.03);
         }
         .input-row {
             display: flex;
-            gap: 10px;
+            gap: 14px;
             margin-bottom: 0;
         }
         input[type="number"], input[type="text"] {
             flex: 1;
-            padding: 12px 14px;
-            border-radius: 10px;
+            padding: 14px 16px;
+            border-radius: 14px;
             border: 1.5px solid var(--border);
-            font-size: 1rem;
+            font-size: 1.08rem;
             outline: none;
-            transition: border 0.2s;
+            transition: border 0.2s, box-shadow 0.2s;
             background: #f9fafb;
+            box-shadow: 0 1px 2px rgba(37,99,235,0.03);
         }
         input:focus {
             border: 1.5px solid var(--primary);
+            box-shadow: 0 0 0 2px #2563eb22;
         }
         button {
-            padding: 12px 18px;
+            padding: 14px 22px;
             border: none;
-            border-radius: 10px;
+            border-radius: 14px;
             background: var(--primary);
             color: #fff;
-            font-size: 1rem;
-            font-weight: 600;
+            font-size: 1.08rem;
+            font-weight: 700;
             cursor: pointer;
             transition: background 0.2s, box-shadow 0.2s;
-            box-shadow: 0 2px 8px rgba(79,140,255,0.08);
+            box-shadow: 0 2px 8px rgba(37,99,235,0.08);
         }
         button:active {
-            background: var(--primary-dark);
+            background: var(--primary-light);
         }
         button:disabled {
             background: #bcdcff;
@@ -95,7 +121,7 @@
             margin-top: 8px;
             font-weight: bold;
             min-height: 24px;
-            font-size: 1.1rem;
+            font-size: 1.13rem;
             text-align: center;
         }
         .result.success {
@@ -105,10 +131,93 @@
             color: var(--error);
         }
         .history {
-            font-size: 0.95rem;
+            font-size: 1.01rem;
             color: var(--text-sub);
             margin-top: 6px;
             text-align: center;
+        }
+        .modal-mask {
+            position: fixed;
+            left: 0; top: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.18);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(37,99,235,0.13);
+            max-width: 90vw;
+            width: 350px;
+            padding: 32px 24px 22px 24px;
+            position: relative;
+            animation: modalIn 0.18s cubic-bezier(.4,1.4,.6,1) both;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(40px) scale(0.98); }
+            to { opacity: 1; transform: none; }
+        }
+        .modal-title {
+            font-size: 1.28rem;
+            font-weight: 700;
+            margin-bottom: 18px;
+            text-align: center;
+            color: var(--primary);
+        }
+        .modal-close {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: #888;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .modal-close:active {
+            color: var(--primary);
+        }
+        .feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            width: 100%;
+        }
+        .feature-item {
+            background: #f1f5f9;
+            border-radius: 14px;
+            padding: 16px 12px 12px 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+        }
+        .feature-title {
+            font-size: 1.09rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--primary-light);
+        }
+        .feature-price {
+            font-size: 1.01rem;
+            color: var(--success);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .feature-desc {
+            font-size: 0.99rem;
+            color: var(--text-sub);
+        }
+        .modal-img {
+            margin-top: 18px;
+            max-width: 180px;
+            width: 70%;
+            display: block;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(37,99,235,0.08);
         }
         @media (max-width: 600px) {
             .container {
@@ -120,7 +229,7 @@
                 max-width: 100vw;
             }
             h1 {
-                font-size: 1.4rem;
+                font-size: 1.3rem;
             }
             .desc-list {
                 font-size: 1rem;
@@ -130,11 +239,20 @@
                 font-size: 1rem;
                 padding: 10px 8px;
             }
+            .modal {
+                width: 96vw;
+                min-width: 0;
+                padding: 22px 8vw 16px 8vw;
+            }
+            .modal-img {
+                max-width: 90vw;
+            }
         }
     </style>
 </head>
 <body>
 <div class="container">
+    <button class="feature-btn" id="featureBtn" title="功能介绍">?</button>
     <h1>猜物品游戏</h1>
     <div class="input-row">
         <input id="maxDescInput" type="number" min="1" max="10" value="3" />
@@ -148,6 +266,25 @@
     <button id="moreDescBtn">再来一条描述</button>
     <div class="result" id="result"></div>
     <div class="history" id="history"></div>
+</div>
+<div id="modalMask" class="modal-mask" style="display:none;">
+    <div class="modal">
+        <button class="modal-close" id="modalClose" title="关闭">×</button>
+        <div class="modal-title">功能介绍</div>
+        <div class="feature-list">
+            <div class="feature-item">
+                <div class="feature-title">Pro 会员</div>
+                <div class="feature-price">8.8元/月</div>
+                <div class="feature-desc">可让AI直接告诉你答案。</div>
+            </div>
+            <div class="feature-item">
+                <div class="feature-title">Plus 会员</div>
+                <div class="feature-price">12.8元/月</div>
+                <div class="feature-desc">包含Pro全部功能，并可自定义背景颜色。</div>
+            </div>
+        </div>
+        <img src="./image/2d.png" alt="二维码" class="modal-img" />
+    </div>
 </div>
 <script>
 const API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
@@ -305,6 +442,60 @@ window.onload = function() {
     moreDescBtn.disabled = true;
     renderHistory();
 };
+
+const featureBtn = document.getElementById("featureBtn");
+const modalMask = document.getElementById("modalMask");
+const modalClose = document.getElementById("modalClose");
+
+featureBtn.onclick = function() {
+    modalMask.style.display = "flex";
+    document.body.style.overflow = "hidden";
+};
+modalClose.onclick = function() {
+    modalMask.style.display = "none";
+    document.body.style.overflow = "auto";
+};
+modalMask.onclick = function(e) {
+    if (e.target === modalMask) {
+        modalMask.style.display = "none";
+        document.body.style.overflow = "auto";
+    }
+};
+
+// 自动弹窗：在用户猜对后自动弹出
+// 找到submitGuess函数，补充自动弹窗逻辑
+const oldSubmitGuess = submitGuess;
+window.submitGuess = function() {
+    if (!gameActive) return;
+    const guess = guessInput.value.trim();
+    if (!guess) {
+        resultDiv.textContent = "请输入你的猜测！";
+        resultDiv.className = "result error";
+        return;
+    }
+    if (guess === answer) {
+        resultDiv.textContent = `恭喜你，猜对了！答案是：${answer}`;
+        resultDiv.className = "result success";
+        gameActive = false;
+        guessInput.disabled = true;
+        guessBtn.disabled = true;
+        moreDescBtn.disabled = true;
+        guessedItems.push(answer);
+        renderHistory();
+        // 自动弹窗
+        setTimeout(() => {
+            modalMask.style.display = "flex";
+            document.body.style.overflow = "hidden";
+        }, 400);
+    } else {
+        resultDiv.textContent = "猜错了，可以再试试或获取更多描述。";
+        resultDiv.className = "result error";
+    }
+};
+guessBtn.onclick = window.submitGuess;
+guessInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") window.submitGuess();
+});
 </script>
 </body>
 </html>
