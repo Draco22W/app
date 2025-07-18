@@ -1,8 +1,12 @@
-*.log
+# 忽略常见临时/构建/编辑器文件
 node_modules/
 dist/
 build/
+*.log
 .vscode/
 .DS_Store
-*.tmp
+Thumbs.db
+
+# 忽略 Git 子仓库（如果你不想提交进去）
 projects/app/
+projects/games/
