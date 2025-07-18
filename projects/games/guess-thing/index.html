@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>猜物品游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: #fff;
+            margin-top: 40px;
+            padding: 32px 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            width: 350px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .desc-list {
+            background: #f0f0f0;
+            border-radius: 8px;
+            padding: 12px;
+            min-height: 60px;
+            margin-bottom: 16px;
+        }
+        .input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        input[type="number"], input[type="text"] {
+            flex: 1;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: #409eff;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:disabled {
+            background: #bcdcff;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 16px;
+            font-weight: bold;
+            color: #d2691e;
+            min-height: 24px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>猜物品游戏</h1>
+    <div class="input-row">
+        <input id="maxDescInput" type="number" min="1" max="10" value="3" />
+        <button id="startBtn">开始游戏</button>
+    </div>
+    <div class="desc-list" id="descList"></div>
+    <div class="input-row">
+        <input id="guessInput" type="text" placeholder="请输入你的猜测..." />
+        <button id="guessBtn">提交猜测</button>
+    </div>
+    <button id="moreDescBtn">再来一条描述</button>
+    <div class="result" id="result"></div>
+</div>
+<script>
+// 阿里云百炼大模型API参数
+const API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+const API_KEY = "sk-fa7bde32774c4c4fa0446d8c84827e2a";
+const MODEL = "qwen-plus";
+
+let maxDesc = 3;
+let descCount = 0;
+let descs = [];
+let answer = "";
+let gameActive = false;
+
+const maxDescInput = document.getElementById("maxDescInput");
+const startBtn = document.getElementById("startBtn");
+const descList = document.getElementById("descList");
+const guessInput = document.getElementById("guessInput");
+const guessBtn = document.getElementById("guessBtn");
+const moreDescBtn = document.getElementById("moreDescBtn");
+const resultDiv = document.getElementById("result");
+
+// 工具函数：调用阿里云百炼大模型
+async function callAliGen(messages) {
+    const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${API_KEY}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            model: MODEL,
+            messages
+        })
+    });
+    if (!res.ok) {
+        throw new Error("AI请求失败");
+    }
+    const data = await res.json();
+    // 百炼兼容OpenAI格式
+    return data.choices?.[0]?.message?.content || "";
+}
+
+// 初始化游戏
+async function startGame() {
+    maxDesc = parseInt(maxDescInput.value) || 3;
+    descCount = 0;
+    descs = [];
+    answer = "";
+    gameActive = true;
+    descList.innerHTML = "正在生成物品和描述...";
+    resultDiv.textContent = "";
+    guessInput.value = "";
+    guessInput.disabled = false;
+    guessBtn.disabled = false;
+    moreDescBtn.disabled = false;
+    // 请求AI生成物品和第一条描述
+    try {
+        const sysPrompt = "你是一个猜物品游戏的AI助手。请你随机选择一个常见物品（如：苹果、手机、书、椅子等），不要告诉用户答案。每次用户请求时，只给出一条关于该物品的简短描述，描述要有一定隐晦性，避免直接暴露答案。";
+        // 第一次请求，AI需返回物品和第一条描述
+        const userPrompt = "请生成一个物品，并给出第一条描述。返回格式：物品：xxx\n描述：yyy";
+        const firstMsg = [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: userPrompt }
+        ];
+        const aiReply = await callAliGen(firstMsg);
+        // 解析物品和描述
+        const match = aiReply.match(/物品[:：]\s*(.+)\n描述[:：]\s*(.+)/);
+        if (!match) throw new Error("AI返回格式错误");
+        answer = match[1].trim();
+        descs = [match[2].trim()];
+        descCount = 1;
+        renderDescs();
+    } catch (e) {
+        descList.innerHTML = "AI生成失败，请重试。";
+        gameActive = false;
+    }
+}
+
+// 请求更多描述
+async function getMoreDesc() {
+    if (!gameActive || descCount >= maxDesc) return;
+    moreDescBtn.disabled = true;
+    try {
+        // 只给AI描述历史，不暴露答案
+        const sysPrompt = `你是一个猜物品游戏的AI助手。物品是：${answer}。用户已获得的描述：${descs.join("；")}`;
+        const userPrompt = "请再给出一条新的描述，避免重复和直接暴露答案。只返回描述内容。";
+        const msgs = [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: userPrompt }
+        ];
+        const aiReply = await callAliGen(msgs);
+        descs.push(aiReply.trim());
+        descCount++;
+        renderDescs();
+    } catch (e) {
+        resultDiv.textContent = "获取描述失败，请重试。";
+    } finally {
+        moreDescBtn.disabled = false;
+    }
+}
+
+// 渲染描述列表
+function renderDescs() {
+    descList.innerHTML = descs.map((d, i) => `<div>描述${i+1}：${d}</div>`).join("");
+    moreDescBtn.disabled = descCount >= maxDesc;
+}
+
+// 提交猜测
+function submitGuess() {
+    if (!gameActive) return;
+    const guess = guessInput.value.trim();
+    if (!guess) {
+        resultDiv.textContent = "请输入你的猜测！";
+        return;
+    }
+    if (guess === answer) {
+        resultDiv.textContent = `恭喜你，猜对了！答案是：${answer}`;
+        gameActive = false;
+        guessInput.disabled = true;
+        guessBtn.disabled = true;
+        moreDescBtn.disabled = true;
+    } else {
+        resultDiv.textContent = "猜错了，可以再试试或获取更多描述。";
+    }
+}
+
+startBtn.onclick = startGame;
+moreDescBtn.onclick = getMoreDesc;
+guessBtn.onclick = submitGuess;
+
+guessInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") submitGuess();
+});
+
+// 初始禁用部分按钮
+window.onload = function() {
+    descList.innerHTML = "请设置最大描述次数并点击开始游戏";
+    guessInput.disabled = true;
+    guessBtn.disabled = true;
+    moreDescBtn.disabled = true;
+};
+</script>
+</body>
+</html>
