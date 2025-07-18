@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>贪吃蛇游戏</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js"></script>
+  <style>
+    body {
+      background: #222;
+      color: #eee;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    #game-container {
+      position: relative;
+      background: #111;
+      border: 2px solid #555;
+      border-radius: 10px;
+      box-shadow: 0 0 20px #0f0;
+    }
+    canvas {
+      display: block;
+      background: #000;
+      border-radius: 10px;
+    }
+    #scoreboard {
+      margin-top: 10px;
+      font-size: 18px;
+    }
+    #controls {
+      margin-top: 15px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    select, input[type=color], button, input[type=number] {
+      padding: 6px 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+      cursor: pointer;
+    }
+    select {
+      min-width: 120px;
+    }
+    button {
+      background: #0a0;
+      color: #fff;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #0f0;
+    }
+    #message {
+      margin-top: 15px;
+      font-size: 20px;
+      font-weight: bold;
+      height: 28px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>贪吃蛇游戏</h1>
+    <div id="game-container">
+      <canvas id="gameCanvas" width="400" height="400" ref="gameCanvas"></canvas>
+    </div>
+    <div id="scoreboard">得分: <span>{{ score }}</span></div>
+    <div id="controls">
+      <label for="modeSelect">游戏模式:</label>
+      <select v-model="gameMode" id="modeSelect">
+        <option value="score15">15分获胜模式</option>
+        <option value="free">自由模式</option>
+      </select>
+      <label for="timeInput">游戏时间 (秒):</label>
+      <input type="number" v-model.number="gameDuration" id="timeInput" min="1" />
+      <label for="difficultySelect">难度选择:</label>
+      <select v-model="gameDifficulty" id="difficultySelect">
+        <option value="easy">简单</option>
+        <option value="medium">中等</option>
+        <option value="hard">困难</option>
+      </select>
+      <label for="colorPicker">蛇颜色:</label>
+      <input type="color" v-model="snakeColor" id="colorPicker" />
+      <button @click="startGame">开始游戏</button>
+      <button @click="testWinSound">测试成功音效</button>
+      <button @click="testLoseSound">测试失败音效</button>
+    </div>
+    <div id="message">{{ message }}</div>
+  </div>
+
+  <audio id="winSound" src="./audio/succeeded.ogg" preload="auto"></audio>
+  <audio id="loseSound" src="./audio/failed.mp3" preload="auto"></audio>
+
+  <script>
+    const { createApp, ref, reactive, onMounted, onUnmounted } = Vue;
+
+    createApp({
+      setup() {
+        const gameCanvas = ref(null);
+        const score = ref(0);
+        const gameMode = ref('score15');
+        const gameDifficulty = ref('medium');
+        const snakeColor = ref('#00ff00');
+        const gameDuration = ref(60);
+        const message = ref('');
+
+        const state = reactive({
+          snake: [
+            { x: 10, y: 10 },
+            { x: 9, y: 10 },
+            { x: 8, y: 10 },
+          ],
+          direction: { x: 1, y: 0 },
+          food: { x: 0, y: 0 },
+          gameInterval: null,
+          gameSpeed: 200,
+          gameOver: false,
+          startTime: null,
+        });
+
+        const gridSize = 20;
+        const tileCount = 400 / gridSize;
+
+        let ctx = null;
+        const winSound = new Audio('./audio/succeeded.ogg');
+        const loseSound = new Audio('./audio/failed.mp3');
+
+        function resetGame() {
+          state.snake = [
+            { x: 10, y: 10 },
+            { x: 9, y: 10 },
+            { x: 8, y: 10 },
+          ];
+          state.direction = { x: 1, y: 0 };
+          placeFood();
+          score.value = 0;
+          state.gameOver = false;
+          message.value = '';
+          setGameSpeed();
+          state.startTime = Date.now();
+        }
+
+        function setGameSpeed() {
+          switch (gameDifficulty.value) {
+            case 'easy':
+              state.gameSpeed = 250;
+              break;
+            case 'medium':
+              state.gameSpeed = 150;
+              break;
+            case 'hard':
+              state.gameSpeed = 100;
+              break;
+          }
+        }
+
+        function placeFood() {
+          state.food.x = Math.floor(Math.random() * tileCount);
+          state.food.y = Math.floor(Math.random() * tileCount);
+          while (state.snake.some(segment => segment.x === state.food.x && segment.y === state.food.y)) {
+            state.food.x = Math.floor(Math.random() * tileCount);
+            state.food.y = Math.floor(Math.random() * tileCount);
+          }
+        }
+
+        function draw() {
+          ctx.fillStyle = '#000';
+          ctx.fillRect(0, 0, 400, 400);
+          ctx.fillStyle = '#f00';
+          ctx.fillRect(state.food.x * gridSize, state.food.y * gridSize, gridSize, gridSize);
+          ctx.fillStyle = snakeColor.value;
+          state.snake.forEach((segment, index) => {
+            ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
+            if (index === 0) {
+              ctx.strokeStyle = '#fff';
+              ctx.lineWidth = 2;
+              ctx.strokeRect(segment.x * gridSize, segment.y * gridSize, gridSize, gridSize);
+            }
+          });
+        }
+
+        function update() {
+          if (state.gameOver) return;
+          const newHead = { x: state.snake[0].x + state.direction.x, y: state.snake[0].y + state.direction.y };
+          if (newHead.x < 0 || newHead.x >= tileCount || newHead.y < 0 || newHead.y >= tileCount) {
+            endGame(false);
+            return;
+          }
+          if (state.snake.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
+            endGame(false);
+            return;
+          }
+          state.snake.unshift(newHead);
+          if (newHead.x === state.food.x && newHead.y === state.food.y) {
+            score.value++;
+            placeFood();
+            if (gameMode.value === 'score15' && score.value >= 2) {
+              endGame(true);
+              return;
+            }
+          } else {
+            state.snake.pop();
+          }
+          if (Date.now() - state.startTime >= gameDuration.value * 1000) {
+            endGame(false);
+          }
+        }
+
+        function endGame(win) {
+          state.gameOver = true;
+          if (win) {
+            message.value = '你赢了！🎉';
+            winSound.play();
+          } else {
+            message.value = '游戏结束！💥';
+            loseSound.play();
+          }
+          clearInterval(state.gameInterval);
+        }
+
+        function gameLoop() {
+          update();
+          draw();
+        }
+
+        function changeDirection(event) {
+          const key = event.key.toLowerCase();
+          if (['arrowup', 'w'].includes(key) && state.direction.y !== 1) {
+            state.direction = { x: 0, y: -1 };
+          } else if (['arrowdown', 's'].includes(key) && state.direction.y !== -1) {
+            state.direction = { x: 0, y: 1 };
+          } else if (['arrowleft', 'a'].includes(key) && state.direction.x !== 1) {
+            state.direction = { x: -1, y: 0 };
+          } else if (['arrowright', 'd'].includes(key) && state.direction.x !== -1) {
+            state.direction = { x: 1, y: 0 };
+          }
+        }
+
+        function startGame() {
+          resetGame();
+          clearInterval(state.gameInterval);
+          state.gameInterval = setInterval(gameLoop, state.gameSpeed);
+        }
+
+        function testWinSound() {
+          winSound.play();
+        }
+
+        function testLoseSound() {
+          loseSound.play();
+        }
+
+        onMounted(() => {
+          ctx = gameCanvas.value.getContext('2d');
+          window.addEventListener('keydown', changeDirection);
+          resetGame();
+        });
+
+        onUnmounted(() => {
+          window.removeEventListener('keydown', changeDirection);
+          clearInterval(state.gameInterval);
+        });
+
+        return {
+          gameCanvas,
+          score,
+          gameMode,
+          gameDifficulty,
+          snakeColor,
+          gameDuration,
+          message,
+          startGame,
+          testWinSound,
+          testLoseSound,
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

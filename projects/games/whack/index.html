@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>打地鼠游戏</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #f8ffae 0%, #43c6ac 100%);
+      font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .navbar {
+      width: 100vw;
+      max-width: 480px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 2px 12px #0001;
+      border-radius: 0 0 18px 18px;
+      margin-bottom: 8px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      height: 48px;
+    }
+    .nav-item {
+      flex: 1;
+      text-align: center;
+      font-size: 1.1rem;
+      color: #43c6ac;
+      padding: 8px 0;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border 0.2s;
+    }
+    .nav-item.active {
+      color: #ffb300;
+      border-bottom: 2.5px solid #ffb300;
+      font-weight: bold;
+    }
+    .container {
+      width: 100vw;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 12px 0 0 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 2.2rem;
+      letter-spacing: 2px;
+      text-shadow: 1px 2px 8px #fff8;
+    }
+    .score-board {
+      display: flex;
+      justify-content: space-between;
+      width: 92%;
+      margin-bottom: 10px;
+      font-size: 1.2rem;
+      color: #222;
+      background: #fff8;
+      border-radius: 12px;
+      padding: 8px 18px;
+      box-shadow: 0 2px 8px #0001;
+    }
+    .difficulty-select {
+      margin-bottom: 10px;
+      font-size: 1.1rem;
+      color: #333;
+      background: #fff6;
+      border-radius: 10px;
+      padding: 6px 16px;
+      box-shadow: 0 1px 4px #0001;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .difficulty-select select {
+      font-size: 1.1rem;
+      border-radius: 6px;
+      border: 1px solid #43c6ac;
+      padding: 2px 8px;
+      outline: none;
+      background: #e0f7fa;
+      color: #333;
+      transition: border 0.2s;
+    }
+    .game-area {
+      width: 100%;
+      aspect-ratio: 1/1;
+      background: #e0f7fa;
+      border-radius: 18px;
+      box-shadow: 0 4px 16px #0002;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+      position: relative;
+      overflow: visible;
+    }
+    .hole {
+      position: relative;
+      background: radial-gradient(ellipse at 60% 80%, #b2dfdb 60%, #43c6ac 100%);
+      box-shadow: 0 4px 16px #0002, 0 0 0 4px #fff8 inset;
+      overflow: visible;
+      transition: box-shadow 0.2s, background 0.2s;
+      filter: drop-shadow(0 0 16px #43c6ac33);
+    }
+    .hole.active {
+      background: radial-gradient(ellipse at 60% 80%, #ffe082 60%, #ffb300 100%);
+      animation: pop 0.2s;
+      box-shadow: 0 6px 24px #ffb30055, 0 0 0 4px #fff8 inset, 0 0 24px #fff17699;
+      filter: drop-shadow(0 0 32px #fff176cc);
+    }
+    @keyframes pop {
+      0% { transform: scale(0.7); }
+      100% { transform: scale(1); }
+    }
+    .mole {
+      animation: mole-in 0.35s cubic-bezier(.68,-0.55,.27,1.55);
+      filter: drop-shadow(0 4px 8px #0005);
+      will-change: transform;
+      z-index: 2;
+      box-shadow: 0 0 18px #fff17655;
+      transition: transform 0.18s cubic-bezier(.68,-0.55,.27,1.55), opacity 0.18s;
+    }
+    @keyframes mole-in {
+      0% { transform: translateX(-50%) scale(0.2) translateY(60%); opacity: 0; }
+      60% { transform: translateX(-50%) scale(1.15) translateY(-8%); opacity: 1; }
+      100% { transform: translateX(-50%) scale(1) translateY(0); opacity: 1; }
+    }
+    .mole.mole-out {
+      animation: mole-out 0.22s cubic-bezier(.68,-0.55,.27,1.55);
+      opacity: 0;
+    }
+    @keyframes mole-out {
+      0% { transform: translateX(-50%) scale(1) translateY(0); opacity: 1; }
+      100% { transform: translateX(-50%) scale(0.7) translateY(40%); opacity: 0; }
+    }
+    .mole.gold {
+      filter: drop-shadow(0 0 24px #ffd700) brightness(1.2);
+      box-shadow: 0 0 32px #ffd700cc;
+      animation: gold-in 0.3s;
+    }
+    @keyframes gold-in {
+      0% { transform: translateX(-50%) scale(0.2) rotate(-30deg); opacity: 0; }
+      100% { transform: translateX(-50%) scale(1.1) rotate(0); opacity: 1; }
+    }
+    .mole.hit {
+      animation: mole-hit 0.3s;
+      filter: brightness(0.7) drop-shadow(0 2px 4px #0008);
+    }
+    @keyframes mole-hit {
+      0% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(1.2) rotate(-10deg); }
+      100% { transform: translateX(-50%) scale(0.5) rotate(10deg); opacity: 0; }
+    }
+    .mole.bomb {
+      filter: drop-shadow(0 0 12px #ff1744) brightness(1.2);
+      animation: bomb-in 0.2s;
+    }
+    @keyframes bomb-in {
+      0% { transform: translateX(-50%) scale(0.2) rotate(-30deg); opacity: 0; }
+      100% { transform: translateX(-50%) scale(1) rotate(0); opacity: 1; }
+    }
+    .hole.fail {
+      animation: fail-shake 0.3s;
+      background: #ff8a80 !important;
+    }
+    @keyframes fail-shake {
+      0% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-8px); }
+      80% { transform: translateX(8px); }
+      100% { transform: translateX(0); }
+    }
+    #particle-canvas {
+      position: absolute;
+      left: 0; top: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 99;
+    }
+    .btn {
+      background: linear-gradient(90deg, #43c6ac 0%, #f8ffae 100%);
+      color: #333;
+      border: none;
+      border-radius: 24px;
+      padding: 12px 36px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      box-shadow: 0 2px 8px #0002;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn:active {
+      background: #43c6ac;
+      color: #fff;
+    }
+    @media (max-width: 480px) {
+      .container {
+        padding: 8px 0 0 0;
+      }
+      .game-area {
+        gap: 6px;
+      }
+      .score-board {
+        font-size: 1rem;
+        padding: 6px 10px;
+      }
+      .navbar {
+        font-size: 0.98rem;
+      }
+    }
+    .combo {
+      color: #ff9800;
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-left: 12px;
+      text-shadow: 0 2px 8px #fff8, 0 0 12px #ff9800aa;
+      animation: combo-pop 0.4s;
+    }
+    @keyframes combo-pop {
+      0% { transform: scale(0.5); opacity: 0; }
+      60% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .tools-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      margin-top: 2px;
+      justify-content: flex-start;
+      width: 100%;
+      max-width: 420px;
+    }
+    .tool-btn {
+      background: linear-gradient(90deg, #b2f7ef 0%, #f8ffae 100%);
+      color: #333;
+      border: none;
+      border-radius: 16px;
+      padding: 6px 18px;
+      font-size: 1rem;
+      font-weight: bold;
+      box-shadow: 0 2px 8px #0001;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .tool-btn:active {
+      background: #43c6ac;
+      color: #fff;
+    }
+    .panel {
+      position: absolute;
+      left: 0; top: 60px;
+      width: 100%;
+      max-width: 480px;
+      min-height: 320px;
+      background: rgba(255,255,255,0.98);
+      border-radius: 18px;
+      box-shadow: 0 4px 24px #0002;
+      z-index: 100;
+      padding: 24px 18px 18px 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .skin-select {
+      margin: 18px 0 0 0;
+      font-size: 1.1rem;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .skin-select select {
+      font-size: 1.1rem;
+      border-radius: 6px;
+      border: 1px solid #43c6ac;
+      padding: 2px 8px;
+      outline: none;
+      background: #e0f7fa;
+      color: #333;
+      transition: border 0.2s;
+    }
+    .combo-popup {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: #222c;
+      color: #fff;
+      font-size: 1.5rem;
+      font-weight: bold;
+      border-radius: 8px;
+      padding: 10px 24px;
+      box-shadow: 0 4px 16px #0006;
+      z-index: 9999;
+      animation: combo-popup 0.7s;
+      pointer-events: none;
+      text-shadow: 0 2px 8px #fff8, 0 0 12px #ff9800aa;
+    }
+    @keyframes combo-popup {
+      0% { transform: translateY(-40px) scale(0.7); opacity: 0; }
+      40% { transform: translateY(0) scale(1.1); opacity: 1; }
+      100% { transform: translateY(0) scale(1); opacity: 0; }
+    }
+    .ice-mole {
+      filter: drop-shadow(0 0 24px #b3e5fc) brightness(1.2);
+      animation: ice-in 0.3s;
+    }
+    @keyframes ice-in {
+      0% { filter: blur(6px) brightness(1.5); opacity: 0; }
+      100% { filter: drop-shadow(0 0 24px #b3e5fc) brightness(1.2); opacity: 1; }
+    }
+    .ice-crack {
+      animation: ice-crack 0.4s;
+      filter: blur(2px) brightness(1.5);
+    }
+    @keyframes ice-crack {
+      0% { opacity: 1; }
+      100% { opacity: 0; transform: scale(1.3) rotate(20deg); }
+    }
+    .tool-btn[disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .cooldown {
+      position: relative;
+      overflow: hidden;
+    }
+    .cooldown::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.18);
+      animation: cooldown-anim 10s linear;
+      pointer-events: none;
+    }
+    @keyframes cooldown-anim {
+      0% { width: 100%; }
+      100% { width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <div class="nav-item active" data-tab="home">主页</div>
+    <div class="nav-item" data-tab="history">历史记录</div>
+    <div class="nav-item" data-tab="rank">排行榜</div>
+    <div class="nav-item" data-tab="settings">设置</div>
+  </div>
+  <div class="container">
+    <h1>打地鼠</h1>
+    <div class="score-board">
+      <span>分数: <span id="score">0</span></span>
+      <span>时间: <span id="time">30</span>s</span>
+      <span id="combo" class="combo"></span>
+    </div>
+    <div class="game-area" id="game-area">
+      <!-- 9 个洞 -->
+      <div class="hole" data-index="0"></div>
+      <div class="hole" data-index="1"></div>
+      <div class="hole" data-index="2"></div>
+      <div class="hole" data-index="3"></div>
+      <div class="hole" data-index="4"></div>
+      <div class="hole" data-index="5"></div>
+      <div class="hole" data-index="6"></div>
+      <div class="hole" data-index="7"></div>
+      <div class="hole" data-index="8"></div>
+    </div>
+    <div class="tools-bar">
+      <button class="tool-btn" id="freeze-btn" title="冰冻 (1)">❄️ 冰冻(1)</button>
+      <button class="tool-btn" id="double-btn" title="双倍分 (2)">✖️2 双倍(2)</button>
+      <button class="tool-btn" id="clear-btn" title="全消 (3)">💥 全消(3)</button>
+    </div>
+    <button class="btn" id="start-btn">开始游戏</button>
+    <audio id="fail-audio" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfae3e2.mp3" preload="auto"></audio>
+    <audio id="bomb-audio" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfae3e2.mp3" preload="auto"></audio>
+    <audio id="gold-audio" src="https://cdn.pixabay.com/audio/2022/10/16/audio_12e1b1b6b2.mp3" preload="auto"></audio>
+    <audio id="star-audio" src="https://cdn.pixabay.com/audio/2022/10/16/audio_12e1b1b6b2.mp3" preload="auto"></audio>
+    <audio id="hit-audio" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9e7e2e.mp3" preload="auto"></audio>
+    <audio id="win-audio" src="https://cdn.pixabay.com/audio/2022/10/16/audio_12e1b1b6b2.mp3" preload="auto"></audio>
+    <audio id="lose-audio" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9e7e2e.mp3" preload="auto"></audio>
+    <audio id="combo-audio" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9e7e2e.mp3" preload="auto"></audio>
+    <canvas id="particle-canvas"></canvas>
+    <div class="panel" id="rank-panel" style="display:none;"></div>
+    <div class="panel" id="history-panel" style="display:none;"></div>
+    <div class="panel" id="settings-panel" style="display:none;">
+      <div class="skin-select">
+        <label>地鼠皮肤：</label>
+        <select id="skin-select">
+          <option value="default">经典</option>
+          <option value="cute">可爱</option>
+          <option value="robot">机器人</option>
+          <option value="cat">猫咪</option>
+        </select>
+      </div>
+      <div class="difficulty-select">
+        <label>难度：</label>
+        <select id="difficulty">
+          <option value="easy">简单</option>
+          <option value="normal" selected>普通</option>
+          <option value="hard">困难</option>
+        </select>
+      </div>
+      <div class="bg-select">
+        <label>背景颜色：</label>
+        <input type="color" id="bg-color-picker" value="#f8ffae">
+      </div>
+    </div>
+  </div>
+  <script>
+    // 地鼠皮肤SVG
+    const skins = {
+      default: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="80" rx="30" ry="12" fill="%23654b2a"/><ellipse cx="50" cy="55" rx="25" ry="28" fill="%23a67c52"/><ellipse cx="50" cy="60" rx="18" ry="18" fill="%23d2b48c"/><ellipse cx="40" cy="55" rx="3" ry="5" fill="%23543a1a"/><ellipse cx="60" cy="55" rx="3" ry="5" fill="%23543a1a"/><ellipse cx="50" cy="70" rx="6" ry="3" fill="%23543a1a"/><ellipse cx="50" cy="65" rx="2" ry="1" fill="%23fff"/></svg>',
+      cute: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="80" rx="30" ry="12" fill="%23f8bbd0"/><ellipse cx="50" cy="55" rx="25" ry="28" fill="%23f06292"/><ellipse cx="50" cy="60" rx="18" ry="18" fill="%23fce4ec"/><ellipse cx="40" cy="55" rx="3" ry="5" fill="%23ad1457"/><ellipse cx="60" cy="55" rx="3" ry="5" fill="%23ad1457"/><ellipse cx="50" cy="70" rx="6" ry="3" fill="%23ad1457"/><ellipse cx="50" cy="65" rx="2" ry="1" fill="%23fff"/><ellipse cx="35" cy="40" rx="5" ry="2" fill="%23fff"/><ellipse cx="65" cy="40" rx="5" ry="2" fill="%23fff"/></svg>',
+      robot: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="80" rx="30" ry="12" fill="%23b0bec5"/><ellipse cx="50" cy="55" rx="25" ry="28" fill="%2390a4ae"/><ellipse cx="50" cy="60" rx="18" ry="18" fill="%23eceff1"/><ellipse cx="40" cy="55" rx="3" ry="5" fill="%23454647"/><ellipse cx="60" cy="55" rx="3" ry="5" fill="%23454647"/><ellipse cx="50" cy="70" rx="6" ry="3" fill="%23454647"/><ellipse cx="50" cy="65" rx="2" ry="1" fill="%23fff"/><rect x="45" y="30" width="10" height="8" fill="%23b0bec5"/></svg>',
+      cat: 'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="80" rx="30" ry="12" fill="%23ffe082"/><ellipse cx="50" cy="55" rx="25" ry="28" fill="%23ffb300"/><ellipse cx="50" cy="60" rx="18" ry="18" fill="%23fffde7"/><ellipse cx="40" cy="55" rx="3" ry="5" fill="%23bfa600"/><ellipse cx="60" cy="55" rx="3" ry="5" fill="%23bfa600"/><ellipse cx="50" cy="70" rx="6" ry="3" fill="%23bfa600"/><ellipse cx="50" cy="65" rx="2" ry="1" fill="%23fff"/><polygon points="30,40 40,30 35,50" fill="%23ffb300"/><polygon points="70,40 60,30 65,50" fill="%23ffb300"/></svg>'
+    };
+    let currentSkin = 'default';
+    // 其他地鼠类型SVG
+    const moleImg =
+      'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="80" rx="30" ry="12" fill="%23654b2a"/><ellipse cx="50" cy="55" rx="25" ry="28" fill="%23a67c52"/><ellipse cx="50" cy="60" rx="18" ry="18" fill="%23d2b48c"/><ellipse cx="40" cy="55" rx="3" ry="5" fill="%23543a1a"/><ellipse cx="60" cy="55" rx="3" ry="5" fill="%23543a1a"/><ellipse cx="50" cy="70" rx="6" ry="3" fill="%23543a1a"/><ellipse cx="50" cy="65" rx="2" ry="1" fill="%23fff"/></svg>';
+    const bombImg =
+      'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="60" r="20" fill="%23ff1744" stroke="%23b71c1c" stroke-width="4"/><rect x="46" y="35" width="8" height="15" rx="4" fill="%23bdbdbd"/><circle cx="50" cy="32" r="4" fill="%23ffd600"/><path d="M50 28 Q52 24 56 28" stroke="%23ffd600" stroke-width="2" fill="none"/></svg>';
+    const goldImg =
+      'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="80" rx="30" ry="12" fill="%23fffde7"/><ellipse cx="50" cy="55" rx="25" ry="28" fill="%23ffd700"/><ellipse cx="50" cy="60" rx="18" ry="18" fill="%23fffde7"/><ellipse cx="40" cy="55" rx="3" ry="5" fill="%23bfa600"/><ellipse cx="60" cy="55" rx="3" ry="5" fill="%23bfa600"/><ellipse cx="50" cy="70" rx="6" ry="3" fill="%23bfa600"/><ellipse cx="50" cy="65" rx="2" ry="1" fill="%23fff"/><circle cx="50" cy="50" r="10" fill="none" stroke="%23fff176" stroke-width="3"/></svg>';
+    const starImg =
+      'data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,15 61,39 88,39 66,57 74,84 50,68 26,84 34,57 12,39 39,39" fill="%23fff700" stroke="%23ffd600" stroke-width="3"/></svg>';
+    const holes = document.querySelectorAll('.hole');
+    const scoreEl = document.getElementById('score');
+    const timeEl = document.getElementById('time');
+    const startBtn = document.getElementById('start-btn');
+    const failAudio = document.getElementById('fail-audio');
+    const bombAudio = document.getElementById('bomb-audio');
+    const goldAudio = document.getElementById('gold-audio');
+    const difficultySel = document.getElementById('difficulty');
+    const particleCanvas = document.getElementById('particle-canvas');
+    let score = 0;
+    let time = 30;
+    let timer = null;
+    let moleTimer = null;
+    let activeIndex = -1;
+    let playing = false;
+    let moleInterval = 800;
+    let lastIndex = -1;
+    let bombIndex = -1;
+    let bombActive = false;
+    let goldIndex = -1;
+    let goldActive = false;
+    // 粒子动画参数
+    let particles = [];
+    // 新增变量
+    let combo = 0, maxCombo = 0, comboTimer = null, doubleMode = false, freezeMode = false;
+    let freezeTimeout = null, doubleTimeout = null;
+    let history = JSON.parse(localStorage.getItem('whack_history')||'[]');
+    let rank = JSON.parse(localStorage.getItem('whack_rank')||'[]');
+    let gameStopped = false;
+    function resizeCanvas() {
+      const rect = particleCanvas.parentElement.getBoundingClientRect();
+      particleCanvas.width = rect.width;
+      particleCanvas.height = rect.height;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    function getDifficultyInterval() {
+      switch (difficultySel.value) {
+        case 'easy': return 1200;
+        case 'normal': return 800;
+        case 'hard': return 500;
+        default: return 800;
+      }
+    }
+    function showMole() {
+      holes.forEach((hole, idx) => {
+        hole.classList.remove('active', 'fail');
+        hole.innerHTML = '';
+      });
+      // 10%概率出现幸运星地鼠
+      if (Math.random() < 0.1) {
+        const star = document.createElement('img');
+        star.src = starImg;
+        star.className = 'mole gold';
+        holes[Math.floor(Math.random() * 9)].classList.add('active');
+        holes[Math.floor(Math.random() * 9)].appendChild(star);
+        starAudio.currentTime = 0;
+        starAudio.play();
+        score += 10;
+        scoreEl.textContent = score;
+        return;
+      }
+      // 随机决定是否出现炸弹/金色地鼠
+      bombActive = Math.random() < 0.22;
+      goldActive = !bombActive && Math.random() < 0.12;
+      let idx, bombIdx, goldIdx;
+      do {
+        idx = Math.floor(Math.random() * 9);
+      } while (idx === lastIndex);
+      lastIndex = idx;
+      activeIndex = idx;
+      // 皮肤切换
+      const skinSelect = document.getElementById('skin-select');
+      currentSkin = skinSelect.value;
+      // 金色地鼠
+      if (goldActive) {
+        goldIndex = idx;
+        const gold = document.createElement('img');
+        gold.src = goldImg;
+        gold.className = 'mole gold';
+        holes[goldIndex].classList.add('active');
+        holes[goldIndex].appendChild(gold);
+        bombIndex = -1;
+        return;
+      }
+      // 炸弹地鼠
+      if (bombActive) {
+        do {
+          bombIdx = Math.floor(Math.random() * 9);
+        } while (bombIdx === idx);
+        bombIndex = bombIdx;
+        const mole = document.createElement('img');
+        mole.src = moleImg;
+        mole.className = 'mole';
+        holes[activeIndex].classList.add('active');
+        holes[activeIndex].appendChild(mole);
+        const bomb = document.createElement('img');
+        bomb.src = bombImg;
+        bomb.className = 'mole bomb';
+        holes[bombIndex].classList.add('active');
+        holes[bombIndex].appendChild(bomb);
+        goldIndex = -1;
+        return;
+      }
+      // 普通地鼠
+      const mole = document.createElement('img');
+      mole.src = moleImg;
+      mole.className = 'mole';
+      holes[activeIndex].classList.add('active');
+      holes[activeIndex].appendChild(mole);
+      bombIndex = -1;
+      goldIndex = -1;
+    }
+    function startGame() {
+      score = 0;
+      time = 30;
+      scoreEl.textContent = score;
+      timeEl.textContent = time;
+      startBtn.textContent = '停止游戏';
+      startBtn.disabled = false;
+      playing = true;
+      gameStopped = false;
+      moleInterval = getDifficultyInterval();
+      showMole();
+      if (moleTimer) clearInterval(moleTimer);
+      moleTimer = setInterval(showMole, moleInterval);
+      if (timer) clearInterval(timer);
+      timer = setInterval(() => {
+        time--;
+        timeEl.textContent = time;
+        if (time <= 0) {
+          endGame();
+        }
+      }, 1000);
+    }
+    function endGame() {
+      clearInterval(timer);
+      clearInterval(moleTimer);
+      holes.forEach(hole => {
+        hole.classList.remove('active', 'fail');
+        hole.innerHTML = '';
+      });
+      startBtn.textContent = '开始游戏';
+      startBtn.disabled = false;
+      playing = false;
+      gameStopped = true;
+      updateHistory(score);
+      updateRank(score);
+      setTimeout(async () => {
+        if (score > 0) {
+          document.getElementById('win-audio').currentTime = 0;
+          document.getElementById('win-audio').play();
+        } else {
+          document.getElementById('lose-audio').currentTime = 0;
+          document.getElementById('lose-audio').play();
+        }
+        let name = localStorage.getItem('whack_name') || '';
+        while (!name) {
+          name = prompt('请输入你的昵称（用于排行榜展示）');
+          if (name) localStorage.setItem('whack_name', name);
+        }
+        let message = '';
+        while (message.length === 0) {
+          message = prompt('给大家留一句话吧（可选，最多20字）：') || '';
+          if (message.length > 20) message = message.slice(0, 20);
+          break;
+        }
+        let avatar = localStorage.getItem('whack_avatar') || '';
+        if (!avatar) {
+          avatar = prompt('请输入头像图片URL（可选，建议正方形，留空用默认头像）：') || '';
+          if (avatar) localStorage.setItem('whack_avatar', avatar);
+        }
+        // 提交分数到API
+        try {
+          await fetch('http://101.35.103.216:3000/rank', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, score, message, avatar })
+          });
+        } catch (e) { /* 忽略网络错误 */ }
+        alert('游戏结束！您的得分：' + score);
+      }, 100);
+    }
+    function createParticles(x, y, color) {
+      for (let i = 0; i < 18; i++) {
+        particles.push({
+          x, y,
+          r: Math.random() * 6 + 4,
+          dx: (Math.random() - 0.5) * 6,
+          dy: (Math.random() - 0.5) * 6,
+          alpha: 1,
+          color,
+        });
+      }
+    }
+    function renderParticles() {
+      const ctx = particleCanvas.getContext('2d');
+      ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+      particles.forEach((p, i) => {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+        ctx.restore();
+        p.x += p.dx;
+        p.y += p.dy;
+        p.alpha -= 0.03;
+      });
+      particles = particles.filter(p => p.alpha > 0);
+      requestAnimationFrame(renderParticles);
+    }
+    renderParticles();
+    function getHoleCenter(hole) {
+      const rect = hole.getBoundingClientRect();
+      const parentRect = particleCanvas.parentElement.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2 - parentRect.left,
+        y: rect.top + rect.height / 2 - parentRect.top
+      };
+    }
+    // combo弹窗
+    function showComboPopup(combo) {
+      let popup = document.createElement('div');
+      popup.className = 'combo-popup';
+      popup.textContent = `连击 x${combo}!`;
+      document.body.appendChild(popup);
+      document.getElementById('combo-audio').currentTime = 0;
+      document.getElementById('combo-audio').play();
+      setTimeout(() => popup.remove(), 700);
+    }
+    // 粒子效果更像MC
+    function createMCParticles(x, y, color) {
+      for (let i = 0; i < 18; i++) {
+        particles.push({
+          x, y,
+          r: Math.random() * 4 + 2,
+          dx: (Math.random() - 0.5) * 8,
+          dy: (Math.random() - 0.5) * 8,
+          alpha: 1,
+          color,
+          square: true
+        });
+      }
+    }
+    function renderParticles() {
+      const ctx = particleCanvas.getContext('2d');
+      ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+      particles.forEach((p, i) => {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        if (p.square) {
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x, p.y, p.r, p.r);
+        } else {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+        }
+        ctx.restore();
+        p.x += p.dx;
+        p.y += p.dy;
+        p.alpha -= 0.03;
+      });
+      particles = particles.filter(p => p.alpha > 0);
+      requestAnimationFrame(renderParticles);
+    }
+    renderParticles();
+    // 排行榜功能
+    function updateRank(score) {
+      rank.push(score);
+      rank = rank.sort((a, b) => b - a).slice(0, 10);
+      localStorage.setItem('whack_rank', JSON.stringify(rank));
+    }
+    function renderRankPanel() {
+      const panel = document.getElementById('rank-panel');
+      panel.innerHTML = '<h2>排行榜</h2><div id="rank-loading">加载中...</div>';
+      fetch('http://101.35.103.216:3000/rank')
+        .then(res => res.json())
+        .then(data => {
+          panel.innerHTML = '<h2>排行榜</h2>' +
+            '<ol>' + data.map((s, i) => `
+              <li style="display:flex;align-items:center;margin-bottom:10px;">
+                <img src="${s.avatar?s.avatar:'https://api.dicebear.com/7.x/pixel-art/svg?seed='+encodeURIComponent(s.name||'匿名')}" style="width:36px;height:36px;border-radius:50%;margin-right:10px;object-fit:cover;">
+                <div style="flex:1;">
+                  <b>${s.name ? s.name : '匿名'}</b> - ${s.score}分
+                  <div style="font-size:0.95em;color:#888;">${s.message?escapeHtml(s.message):''}</div>
+                </div>
+                <span style="font-size:0.9em;color:#aaa;min-width:90px;text-align:right;">${formatTime(s.time)}</span>
+              </li>`).join('') + '</ol>';
+        })
+        .catch(() => {
+          panel.innerHTML = '<h2>排行榜</h2><div style="color:red">无法加载排行榜，请稍后重试。</div>';
+        });
+    }
+    function escapeHtml(str) {
+      return (str||'').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;','\'':'&#39;'}[c]));
+    }
+    function formatTime(ts) {
+      if (!ts) return '';
+      const d = new Date(ts);
+      return d.getFullYear() + '-' + (d.getMonth()+1).toString().padStart(2,'0') + '-' + d.getDate().toString().padStart(2,'0') + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+    }
+    // 历史记录功能
+    function updateHistory(score) {
+      history.push(score);
+      if (history.length > 10) history.shift();
+      localStorage.setItem('whack_history', JSON.stringify(history));
+    }
+    function renderHistoryPanel() {
+      const panel = document.getElementById('history-panel');
+      panel.innerHTML = '<h2>历史记录</h2>' +
+        '<ul>' + history.map((s, i) => `<li>第${i+1}场：${s}分</li>`).join('') + '</ul>';
+    }
+    // 技能冷却管理
+    function setCooldown(btn, seconds) {
+      btn.disabled = true;
+      btn.classList.add('cooldown');
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.classList.remove('cooldown');
+      }, seconds * 1000);
+    }
+    holes.forEach((hole, idx) => {
+      function hitMole(e) {
+        if (!playing) return;
+        // 冰冻技能处理
+        if (freezeMode) {
+          const mole = hole.querySelector('.mole');
+          if (mole) {
+            mole.classList.add('ice-mole');
+            setTimeout(() => {
+              mole.classList.add('ice-crack');
+              createMCParticles(...Object.values(getHoleCenter(hole)), '#b3e5fc');
+              setTimeout(() => {
+                hole.classList.remove('active');
+                hole.innerHTML = '';
+              }, 400);
+            }, 400);
+          }
+          return;
+        }
+        // 只有命中当前活跃地鼠/特殊地鼠才得分和连击
+        let isHit = false;
+        // 幸运星地鼠
+        if (goldActive && idx === goldIndex) isHit = true;
+        // 炸弹地鼠
+        if (bombActive && idx === bombIndex) isHit = true;
+        // 普通地鼠
+        if (!bombActive && !goldActive && idx === activeIndex) isHit = true;
+        if (!isHit) {
+          // 点空洞或非活跃地鼠不加分不连击，且重置combo
+          combo = 0;
+          return;
+        }
+        // 命中地鼠才加分和连击
+        combo++;
+        if (combo > 1) showComboPopup(combo);
+        clearTimeout(comboTimer);
+        comboTimer = setTimeout(() => combo = 0, 1200);
+        let addScore = 1;
+        if (doubleMode) addScore *= 2;
+        if (combo > 1) addScore += combo - 1;
+        score += addScore;
+        scoreEl.textContent = score;
+        document.getElementById('hit-audio').currentTime = 0;
+        document.getElementById('hit-audio').play();
+        const {x, y} = getHoleCenter(hole);
+        createMCParticles(x, y, combo > 1 ? '#ff9800' : '#ffd600');
+        // 其余命中逻辑同前...
+      }
+      hole.addEventListener('touchstart', hitMole);
+      hole.addEventListener('mousedown', hitMole);
+    });
+    startBtn.addEventListener('click', function() {
+      if (!playing) {
+        startGame();
+      } else {
+        endGame();
+      }
+    });
+    difficultySel.addEventListener('change', () => {
+      if (playing) {
+        moleInterval = getDifficultyInterval();
+        clearInterval(moleTimer);
+        moleTimer = setInterval(showMole, moleInterval);
+      }
+    });
+    // 顶部导航栏切换高亮和面板显示
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', function() {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById('rank-panel').style.display = this.dataset.tab==='rank' ? '' : 'none';
+        document.getElementById('history-panel').style.display = this.dataset.tab==='history' ? '' : 'none';
+        document.getElementById('settings-panel').style.display = this.dataset.tab==='settings' ? '' : 'none';
+        if(this.dataset.tab==='rank') renderRankPanel();
+        if(this.dataset.tab==='history') renderHistoryPanel();
+      });
+    });
+    // 技能快捷键
+    document.addEventListener('keydown', e => {
+      if (!playing) return;
+      if (e.key === '1') document.getElementById('freeze-btn').click();
+      if (e.key === '2') document.getElementById('double-btn').click();
+      if (e.key === '3') document.getElementById('clear-btn').click();
+    });
+    // 冰冻技能逻辑
+    document.getElementById('freeze-btn').addEventListener('click', () => {
+      if (playing && !freezeMode && !document.getElementById('freeze-btn').disabled) {
+        freezeMode = true;
+        document.getElementById('freeze-btn').textContent = '❄️ 冰冻中';
+        setCooldown(document.getElementById('freeze-btn'), 10);
+        setTimeout(() => {
+          freezeMode = false;
+          document.getElementById('freeze-btn').textContent = '❄️ 冰冻(1)';
+        }, 5000);
+      }
+    });
+    // 双倍技能逻辑
+    document.getElementById('double-btn').addEventListener('click', () => {
+      if (playing && !doubleMode && !document.getElementById('double-btn').disabled) {
+        doubleMode = true;
+        document.getElementById('double-btn').textContent = '✖️2 双倍中';
+        setCooldown(document.getElementById('double-btn'), 10);
+        setTimeout(() => {
+          doubleMode = false;
+          document.getElementById('double-btn').textContent = '✖️2 双倍(2)';
+        }, 5000);
+      }
+    });
+    // 全消技能逻辑
+    document.getElementById('clear-btn').addEventListener('click', () => {
+      if (playing && !document.getElementById('clear-btn').disabled) {
+        setCooldown(document.getElementById('clear-btn'), 10);
+        holes.forEach(hole => {
+          if (hole.innerHTML) {
+            const {x, y} = getHoleCenter(hole);
+            createMCParticles(x, y, '#ffd600');
+            hole.classList.remove('active', 'fail');
+            hole.innerHTML = '';
+          }
+        });
+        activeIndex = -1;
+        bombIndex = -1;
+        goldIndex = -1;
+      }
+    });
+    // 皮肤切换事件监听
+    document.getElementById('skin-select').addEventListener('change', () => {
+      currentSkin = document.getElementById('skin-select').value;
+      // 重新渲染所有地鼠为当前皮肤
+      holes.forEach(hole => {
+        hole.innerHTML = ''; // 清除旧地鼠
+        const mole = document.createElement('img');
+        mole.src = skins[currentSkin];
+        mole.className = 'mole';
+        hole.appendChild(mole);
+      });
+      // 重新设置道具按钮的背景色
+      document.getElementById('freeze-btn').style.backgroundColor = '#f8ffae';
+      document.getElementById('freeze-btn').style.color = '#333';
+      document.getElementById('double-btn').style.backgroundColor = '#f8ffae';
+      document.getElementById('double-btn').style.color = '#333';
+    });
+    // 背景颜色切换
+    const bgColorPicker = document.getElementById('bg-color-picker');
+    bgColorPicker.addEventListener('input', function() {
+      document.body.style.background = this.value;
+    });
+    // 初始化时同步背景色
+    document.body.style.background = bgColorPicker.value;
+    // 优化地鼠消失动画
+    function removeMoleWithAnim(hole) {
+      const mole = hole.querySelector('.mole');
+      if (mole) {
+        mole.classList.add('mole-out');
+        setTimeout(() => {
+          hole.classList.remove('active');
+          hole.innerHTML = '';
+        }, 220);
+      } else {
+        hole.classList.remove('active');
+        hole.innerHTML = '';
+      }
+    }
+    // 替换所有地鼠消失的地方为 removeMoleWithAnim(hole)
+  </script>
+</body>
+</html> 
