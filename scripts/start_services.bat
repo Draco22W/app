@@ -47,13 +47,19 @@ if not exist "venv" (
 
 echo 激活虚拟环境并安装依赖...
 call venv\Scripts\activate.bat
-pip install -r requirements.txt
-if errorlevel 1 (
-    echo 依赖安装失败，请检查网络连接
+if exist "requirements.txt" (
+    pip install -r requirements.txt
+    if errorlevel 1 (
+        echo 依赖安装失败，请检查网络连接
+        pause
+        exit /b 1
+    )
+    echo 依赖安装完成
+) else (
+    echo requirements.txt文件不存在
     pause
     exit /b 1
 )
-echo 依赖安装完成
 
 :: 启动后端API服务
 echo.

@@ -4,9 +4,17 @@
 
 ## 🚀 快速启动
 
-### Windows用户
+### Windows用户（推荐使用PowerShell）
+```powershell
+# 以管理员身份运行PowerShell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+.\scripts\start_services.ps1
+```
+
+### Windows用户（批处理脚本）
 ```bash
-scripts/start_services.bat
+# 以管理员身份运行
+scripts\start_services.bat
 ```
 
 ### Linux/Mac用户
