@@ -17,7 +17,7 @@ DB_CONFIG = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'password': '',  # 请设置你的MySQL密码
+    'password': '123123',  # MySQL密码
     'database': 'game_platform',
     'charset': 'utf8mb4'
 }
@@ -25,8 +25,23 @@ DB_CONFIG = {
 # 数据库连接
 def get_db_connection():
     try:
-        connection = pymysql.connect(**DB_CONFIG)
+        # 先连接MySQL服务器（不指定数据库）
+        connection = pymysql.connect(
+            host=DB_CONFIG['host'],
+            port=DB_CONFIG['port'],
+            user=DB_CONFIG['user'],
+            password=DB_CONFIG['password'],
+            charset=DB_CONFIG['charset']
+        )
+        
+        # 创建数据库（如果不存在）
+        with connection.cursor() as cursor:
+            cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']}")
+        
+        # 连接到指定数据库
+        connection.select_db(DB_CONFIG['database'])
         return connection
+        
     except Exception as e:
         print(f"数据库连接失败: {e}")
         return None
