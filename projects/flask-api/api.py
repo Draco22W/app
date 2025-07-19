@@ -7,39 +7,35 @@ import jwt
 import datetime
 import os
 import re
+from config import get_db_config
 
 app = Flask(__name__)
 CORS(app)
 
 # 配置
 app.config['SECRET_KEY'] = 'your-secret-key-here'
-DB_CONFIG = {
-    'host': 'localhost',
-    'port': 3306,
-    'user': 'root',
-    'password': '123123',  # MySQL密码
-    'database': 'game_platform',
-    'charset': 'utf8mb4'
-}
 
 # 数据库连接
 def get_db_connection():
     try:
+        # 获取当前环境的数据库配置
+        db_config = get_db_config()
+        
         # 先连接MySQL服务器（不指定数据库）
         connection = pymysql.connect(
-            host=DB_CONFIG['host'],
-            port=DB_CONFIG['port'],
-            user=DB_CONFIG['user'],
-            password=DB_CONFIG['password'],
-            charset=DB_CONFIG['charset']
+            host=db_config['host'],
+            port=db_config['port'],
+            user=db_config['user'],
+            password=db_config['password'],
+            charset=db_config['charset']
         )
         
         # 创建数据库（如果不存在）
         with connection.cursor() as cursor:
-            cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']}")
+            cursor.execute(f"CREATE DATABASE IF NOT EXISTS {db_config['database']}")
         
         # 连接到指定数据库
-        connection.select_db(DB_CONFIG['database'])
+        connection.select_db(db_config['database'])
         return connection
         
     except Exception as e:
