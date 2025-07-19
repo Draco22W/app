@@ -471,10 +471,34 @@
     </div>
 
     <script>
+        // 环境配置
+        const ENV_CONFIG = {
+            dev: {
+                API_BASE: 'http://localhost:5000/api',
+                GAME_BASE_URL: '/app'
+            },
+            prod: {
+                API_BASE: 'http://101.35.103.216/api',
+                GAME_BASE_URL: 'http://101.35.103.216/app'
+            }
+        };
+
+        // 获取当前环境（默认为开发环境）
+        const getCurrentEnv = () => {
+            // 可以通过URL参数、localStorage或其他方式设置环境
+            const envParam = new URLSearchParams(window.location.search).get('env');
+            const envStorage = localStorage.getItem('app_env');
+            return envParam || envStorage || 'dev';
+        };
+
+        const currentEnv = getCurrentEnv();
+        const config = ENV_CONFIG[currentEnv];
+
         // 全局变量
         let currentUser = null;
         let isLoginMode = true;
-        const API_BASE = 'http://localhost:5000/api';
+        const API_BASE = config.API_BASE;
+        const GAME_BASE_URL = config.GAME_BASE_URL;
 
         // DOM 元素
         const authBtn = document.getElementById("authBtn");
@@ -689,7 +713,7 @@
                     <div class="game-detail-info">
                         <h2>${game.title}</h2>
                         <p>${game.description}</p>
-                        <button class="play-btn" onclick="playGame('/app/${game.game_url}')">开始游戏</button>
+                        <button class="play-btn" onclick="playGame('${GAME_BASE_URL}/${game.game_url}')">开始游戏</button>
                     </div>
                 </div>
                 <div class="how-to-play">
