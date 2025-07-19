@@ -4,24 +4,43 @@
 
 ## 🚀 快速启动
 
-### Windows用户（推荐使用PowerShell）
+### 本地运行
+
+#### Windows用户（推荐使用PowerShell）
 ```powershell
 # 以管理员身份运行PowerShell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 .\scripts\start_services.ps1
 ```
 
-### Windows用户（批处理脚本）
+#### Windows用户（批处理脚本）
 ```bash
 # 以管理员身份运行
 scripts\start_services.bat
 ```
 
-### Linux/Mac用户
+#### Linux/Mac用户
 ```bash
 chmod +x scripts/start_services.sh
 ./scripts/start_services.sh
 ```
+
+### 服务器部署
+
+#### 自动部署到服务器
+```bash
+# Windows用户
+scripts\deploy_to_server.bat
+
+# Linux/Mac用户
+chmod +x scripts/deploy.sh
+./scripts/deploy.sh
+```
+
+#### 部署后访问
+- **服务器地址**: http://101.35.103.216
+- **24小时在线运行**
+- **支持多人同时访问**
 
 ## 📁 项目结构
 
