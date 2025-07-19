@@ -1,5 +1,9 @@
 # 游戏平台后端API
 
+## 后端启动方式：
+localhost  python3 api.py
+服务器 FLASK_ENV=production python3 api.py
+
 ## 环境要求
 
 - Python 3.7+
