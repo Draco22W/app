@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏平台 - 我的游戏</title>
+    <style>
+        :root {
+            --primary: #1b2838;
+            --secondary: #66c0f4;
+            --accent: #5c7e10;
+            --bg: #1b2838;
+            --card-bg: #2a475e;
+            --text: #c7d5e0;
+            --text-secondary: #8f98a0;
+            --border: #4c5b5c;
+            --success: #66c0f4;
+            --error: #ff4444;
+            --radius: 8px;
+            --shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .header {
+            background: var(--primary);
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--secondary);
+        }
+
+        .auth-btn {
+            background: var(--secondary);
+            color: var(--primary);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .auth-btn:hover {
+            background: #4a9fd4;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .game-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .game-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .game-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(45deg, var(--primary), var(--card-bg));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .game-info {
+            padding: 1rem;
+        }
+
+        .game-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .game-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .rating {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .stars {
+            color: #ffd700;
+        }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            margin: 2rem auto;
+            max-width: 800px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text);
+        }
+
+        .close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .game-detail {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .game-detail-image {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(45deg, var(--primary), var(--card-bg));
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: var(--text-secondary);
+        }
+
+        .game-detail-info h2 {
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+
+        .game-detail-info p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .play-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: background 0.2s;
+        }
+
+        .play-btn:hover {
+            background: #4a6b0c;
+        }
+
+        .how-to-play {
+            background: var(--primary);
+            padding: 1rem;
+            border-radius: var(--radius);
+            margin-bottom: 2rem;
+        }
+
+        .how-to-play h3 {
+            margin-bottom: 0.5rem;
+            color: var(--secondary);
+        }
+
+        .how-to-play pre {
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            font-family: inherit;
+        }
+
+        .comments-section h3 {
+            margin-bottom: 1rem;
+            color: var(--secondary);
+        }
+
+        .comment {
+            background: var(--primary);
+            padding: 1rem;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .comment-author {
+            font-weight: bold;
+            color: var(--secondary);
+        }
+
+        .comment-rating {
+            color: #ffd700;
+        }
+
+        .comment-content {
+            color: var(--text-secondary);
+        }
+
+        /* 登录注册表单 */
+        .auth-form {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--primary);
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--secondary);
+        }
+
+        .form-btn {
+            width: 100%;
+            background: var(--secondary);
+            color: var(--primary);
+            border: none;
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            margin-top: 1rem;
+        }
+
+        .form-btn:hover {
+            background: #4a9fd4;
+        }
+
+        .form-switch {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .form-switch a {
+            color: var(--secondary);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .form-switch a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: var(--error);
+            color: white;
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+        }
+
+        .success-message {
+            background: var(--success);
+            color: var(--primary);
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .games-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .game-detail {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                margin: 1rem;
+            }
+
+            .nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .no-games {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="logo">游戏平台</div>
+            <button class="auth-btn" id="authBtn">登录</button>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div id="gamesContainer">
+            <div class="loading">加载中...</div>
+        </div>
+    </main>
+
+    <!-- 登录注册模态框 -->
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="authTitle">登录</h2>
+                <button class="close" onclick="closeAuthModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="authForm" class="auth-form">
+                    <div id="authMessage"></div>
+                    <div class="form-group">
+                        <label for="username">用户名</label>
+                        <input type="text" id="username" required minlength="3">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">手机号</label>
+                        <input type="text" id="phone" required>
+                    </div>
+                    <button type="submit" class="form-btn" id="submitBtn">登录</button>
+                    <div class="form-switch">
+                        <a id="switchAuth" onclick="switchAuthMode()">没有账号？立即注册</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏详情模态框 -->
+    <div id="gameModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="gameModalTitle">游戏详情</h2>
+                <button class="close" onclick="closeGameModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="gameModalBody">
+                <!-- 游戏详情内容 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentUser = null;
+        let isLoginMode = true;
+        const API_BASE = 'http://localhost:5000/api';
+
+        // DOM 元素
+        const authBtn = document.getElementById("authBtn");
+        const authModal = document.getElementById("authModal");
+        const authForm = document.getElementById("authForm");
+        const authTitle = document.getElementById("authTitle");
+        const submitBtn = document.getElementById("submitBtn");
+        const switchAuth = document.getElementById("switchAuth");
+        const authMessage = document.getElementById("authMessage");
+        const gamesContainer = document.getElementById("gamesContainer");
+        const gameModal = document.getElementById("gameModal");
+        const gameModalTitle = document.getElementById("gameModalTitle");
+        const gameModalBody = document.getElementById("gameModalBody");
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGames();
+            checkAuthStatus();
+        });
+
+        // 检查登录状态
+        function checkAuthStatus() {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            if (token && user) {
+                // 尝试自动登录
+                autoLogin(token);
+            }
+        }
+
+        // 自动登录
+        async function autoLogin(token) {
+            try {
+                const response = await fetch(`${API_BASE}/auto-login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    currentUser = data.user;
+                    updateAuthButton();
+                } else {
+                    // Token无效，清除本地存储
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    currentUser = null;
+                    updateAuthButton();
+                }
+            } catch (error) {
+                console.log('自动登录失败:', error);
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                currentUser = null;
+                updateAuthButton();
+            }
+        }
+
+        // 更新登录按钮
+        function updateAuthButton() {
+            if (currentUser) {
+                authBtn.textContent = currentUser.username;
+            } else {
+                authBtn.textContent = '登录';
+            }
+        }
+
+        // 显示消息
+        function showMessage(message, type = 'error') {
+            authMessage.innerHTML = `<div class="${type}-message">${message}</div>`;
+        }
+
+        // 切换登录/注册模式
+        function switchAuthMode() {
+            isLoginMode = !isLoginMode;
+            authTitle.textContent = isLoginMode ? '登录' : '注册';
+            submitBtn.textContent = isLoginMode ? '登录' : '注册';
+            switchAuth.textContent = isLoginMode ? '没有账号？立即注册' : '已有账号？立即登录';
+            authMessage.innerHTML = '';
+            
+            // 更新表单字段
+            const usernameLabel = document.querySelector('label[for="username"]');
+            const phoneLabel = document.querySelector('label[for="phone"]');
+            
+            if (isLoginMode) {
+                usernameLabel.textContent = '用户名';
+                phoneLabel.textContent = '手机号';
+            } else {
+                usernameLabel.textContent = '用户名';
+                phoneLabel.textContent = '手机号';
+            }
+        }
+
+        // 打开登录模态框
+        function openAuthModal() {
+            authModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 关闭登录模态框
+        function closeAuthModal() {
+            authModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            authMessage.innerHTML = '';
+        }
+
+        // 打开游戏详情模态框
+        function openGameModal() {
+            gameModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 关闭游戏详情模态框
+        function closeGameModal() {
+            gameModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // 加载游戏列表
+        async function loadGames() {
+            try {
+                const response = await fetch(`${API_BASE}/games`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderGames(data.games);
+                } else {
+                    gamesContainer.innerHTML = '<div class="no-games">加载游戏失败</div>';
+                }
+            } catch (error) {
+                gamesContainer.innerHTML = '<div class="no-games">网络错误，请检查后端服务</div>';
+            }
+        }
+
+        // 渲染游戏列表
+        function renderGames(games) {
+            if (games.length === 0) {
+                gamesContainer.innerHTML = '<div class="no-games">暂无游戏</div>';
+                return;
+            }
+
+            const gamesHTML = games.map(game => `
+                <div class="game-card" onclick="showGameDetail(${game.id})">
+                    <div class="game-image">🎮</div>
+                    <div class="game-info">
+                        <div class="game-title">${game.title}</div>
+                        <div class="game-description">${game.description}</div>
+                        <div class="game-stats">
+                            <div class="rating">
+                                <span class="stars">${'★'.repeat(Math.floor(game.avg_rating || 0))}${'☆'.repeat(5 - Math.floor(game.avg_rating || 0))}</span>
+                                <span>${game.avg_rating || 0}</span>
+                            </div>
+                            <div>评论: ${game.comment_count || 0}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            gamesContainer.innerHTML = `
+                <div class="games-grid">
+                    ${gamesHTML}
+                </div>
+            `;
+        }
+
+        // 显示游戏详情
+        async function showGameDetail(gameId) {
+            if (!currentUser) {
+                openAuthModal();
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/games/${gameId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderGameDetail(data.game, data.comments);
+                    openGameModal();
+                } else {
+                    alert('获取游戏详情失败');
+                }
+            } catch (error) {
+                alert('网络错误');
+            }
+        }
+
+        // 渲染游戏详情
+        function renderGameDetail(game, comments) {
+            gameModalTitle.textContent = game.title;
+            
+            const commentsHTML = comments.map(comment => `
+                <div class="comment">
+                    <div class="comment-header">
+                        <span class="comment-author">${comment.username}</span>
+                        <span class="comment-rating">${'★'.repeat(comment.rating)}${'☆'.repeat(5 - comment.rating)}</span>
+                    </div>
+                    <div class="comment-content">${comment.content}</div>
+                </div>
+            `).join('');
+
+            gameModalBody.innerHTML = `
+                <div class="game-detail">
+                    <div class="game-detail-image">🎮</div>
+                    <div class="game-detail-info">
+                        <h2>${game.title}</h2>
+                        <p>${game.description}</p>
+                        <button class="play-btn" onclick="playGame('${game.game_url}')">开始游戏</button>
+                    </div>
+                </div>
+                <div class="how-to-play">
+                    <h3>游戏玩法</h3>
+                    <pre>${game.how_to_play}</pre>
+                </div>
+                <div class="comments-section">
+                    <h3>玩家评论 (${comments.length})</h3>
+                    ${commentsHTML || '<p>暂无评论</p>'}
+                </div>
+            `;
+        }
+
+        // 开始游戏
+        function playGame(gameUrl) {
+            window.open(gameUrl, '_blank');
+        }
+
+        // 处理登录/注册
+        async function handleAuth(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const phone = document.getElementById('phone').value;
+            
+            const endpoint = isLoginMode ? '/login' : '/register';
+            
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, phone })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    currentUser = data.user;
+                    updateAuthButton();
+                    closeAuthModal();
+                    showMessage(data.message, 'success');
+                } else {
+                    showMessage(data.message);
+                }
+            } catch (error) {
+                showMessage('网络错误，请检查后端服务');
+            }
+        }
+
+        // 事件监听
+        authBtn.addEventListener('click', function() {
+            if (currentUser) {
+                // 已登录，显示用户菜单或登出
+                if (confirm('确定要登出吗？')) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    currentUser = null;
+                    updateAuthButton();
+                }
+            } else {
+                openAuthModal();
+            }
+        });
+
+        authForm.addEventListener('submit', handleAuth);
+
+        // 点击模态框外部关闭
+        window.addEventListener('click', function(event) {
+            if (event.target === authModal) {
+                closeAuthModal();
+            }
+            if (event.target === gameModal) {
+                closeGameModal();
+            }
+        });
+    </script>
+</body>
+</html>
