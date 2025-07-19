@@ -483,12 +483,24 @@
             }
         };
 
-        // 获取当前环境（默认为开发环境）
+        // 获取当前环境（根据URL自动判断）
         const getCurrentEnv = () => {
-            // 可以通过URL参数、localStorage或其他方式设置环境
-            const envParam = new URLSearchParams(window.location.search).get('env');
-            const envStorage = localStorage.getItem('app_env');
-            return envParam || envStorage || 'dev';
+            
+            // 最后根据当前URL自动判断
+            const hostname = window.location.hostname;
+
+            if (
+                hostname === 'localhost' || 
+                window.location.href.startsWith('file://') ||
+                hostname === '127.0.0.1' || 
+                hostname.startsWith('192.168.') || 
+                hostname.startsWith('10.') || 
+                hostname.startsWith('172.')
+            ) {
+                return 'dev';
+            } else {
+                return 'prod';
+            }
         };
 
         const currentEnv = getCurrentEnv();
