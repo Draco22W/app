@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>火柴人打斗游戏</title>
+    <title>🔥 火柴人打斗游戏</title>
     <style>
         * {
             margin: 0;
@@ -13,48 +13,43 @@
 
         body {
             font-family: 'Arial', sans-serif;
-            background: #000;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             overflow: hidden;
+            user-select: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             cursor: crosshair;
         }
 
-        .game-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-        }
-
-        .game-canvas {
+        .ui-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(to bottom, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-        }
-
-        .ui-overlay {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            z-index: 10;
             pointer-events: none;
+            z-index: 10;
         }
 
         .health-bars {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
+            gap: 40px;
+            align-items: center;
         }
 
         .health-bar {
-            width: 300px;
-            height: 25px;
-            background: rgba(0, 0, 0, 0.7);
+            width: 200px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.5);
             border: 2px solid #fff;
-            border-radius: 15px;
+            border-radius: 10px;
             overflow: hidden;
             position: relative;
         }
@@ -62,57 +57,118 @@
         .health-fill {
             height: 100%;
             transition: width 0.3s ease;
-            border-radius: 13px;
+            border-radius: 8px;
             position: relative;
         }
 
-        .health-fill.player1 {
-            background: linear-gradient(90deg, #ff4757, #ff6b6b);
+        .health-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+            animation: healthShine 2s infinite;
         }
 
-        .health-fill.player2 {
-            background: linear-gradient(90deg, #3742fa, #5352ed);
+        @keyframes healthShine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .player1-health .health-fill {
+            background: linear-gradient(90deg, #ff6b6b, #ff4757);
+        }
+
+        .player2-health .health-fill {
+            background: linear-gradient(90deg, #3742fa, #00d2ff);
         }
 
         .health-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
+            color: #fff;
             font-weight: bold;
             font-size: 14px;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            margin: 0 10px;
         }
 
-        .controls-info {
+        .controls {
             position: absolute;
             bottom: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid #fff;
-            font-size: 14px;
-            line-height: 1.5;
+            color: #fff;
+            font-size: 12px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
         }
 
-        .game-status {
+        .controls h3 {
+            margin-bottom: 8px;
+            color: #ffd700;
+        }
+
+        .controls p {
+            margin: 2px 0;
+            line-height: 1.4;
+        }
+
+        .skill-cooldowns {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            border: 2px solid #fff;
-            text-align: center;
-            font-size: 24px;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .skill-cooldown {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 12px;
+            border-radius: 6px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .skill-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
             font-weight: bold;
-            z-index: 20;
-            display: none;
+            color: #fff;
+        }
+
+        .skill-icon.dart {
+            background: linear-gradient(45deg, #ff6b6b, #ff4757);
+        }
+
+        .skill-icon.teleport {
+            background: linear-gradient(45deg, #3742fa, #00d2ff);
+        }
+
+        .cooldown-bar {
+            width: 60px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .cooldown-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ffed4e);
+            transition: width 0.1s linear;
+            border-radius: 3px;
         }
 
         .settings-menu {
@@ -120,118 +176,176 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.95);
-            color: white;
+            background: rgba(0, 0, 0, 0.9);
             padding: 30px;
             border-radius: 15px;
-            border: 2px solid #fff;
-            text-align: center;
-            z-index: 30;
+            border: 2px solid #ffd700;
+            backdrop-filter: blur(20px);
             display: none;
-            min-width: 400px;
+            pointer-events: auto;
+            min-width: 300px;
         }
 
         .settings-menu h2 {
+            color: #ffd700;
+            text-align: center;
             margin-bottom: 20px;
-            color: #ff6b6b;
+            font-size: 24px;
         }
 
-        .settings-menu button {
-            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
-            color: white;
-            border: none;
-            padding: 12px 24px;
+        .setting-item {
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .setting-item label {
+            color: #fff;
+            font-size: 16px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 25px;
+            background: #444;
             border-radius: 25px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #ffd700;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 21px;
+            height: 21px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(25px);
+        }
+
+        .difficulty-select {
+            background: #333;
+            color: #fff;
+            border: 1px solid #ffd700;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ff4757);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
             font-size: 16px;
             font-weight: bold;
+            margin-top: 20px;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            border: 3px solid #ffd700;
+            text-align: center;
+            display: none;
+            pointer-events: auto;
+        }
+
+        .game-over h2 {
+            color: #ffd700;
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+
+        .game-over p {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #fff;
+            display: block;
+            pointer-events: auto;
+        }
+
+        .start-screen h1 {
+            font-size: 48px;
+            color: #ffd700;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        .start-screen p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .start-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ff4757);
+            color: #fff;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 20px;
+            font-weight: bold;
             cursor: pointer;
-            margin: 10px;
-            transition: all 0.3s ease;
+            transition: transform 0.2s;
         }
 
-        .settings-menu button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        .start-btn:hover {
+            transform: scale(1.1);
         }
 
-        .skill-cooldown {
-            position: absolute;
-            bottom: 80px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #fff;
-            font-size: 12px;
-        }
-
-        .cooldown-bar {
-            width: 200px;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 5px;
-        }
-
-        .cooldown-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ff6b6b, #ff8e8e);
-            transition: width 0.1s ease;
-            border-radius: 4px;
-        }
-
-        .dart {
-            position: absolute;
-            width: 8px;
-            height: 2px;
-            background: #ff6b6b;
-            border-radius: 1px;
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        .teleport-effect {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            border: 2px solid #00d2ff;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 5;
-            animation: teleportAnimation 0.3s ease-out forwards;
-        }
-
-        @keyframes teleportAnimation {
-            0% {
-                opacity: 1;
-                transform: scale(0.5);
-            }
-            100% {
-                opacity: 0;
-                transform: scale(2);
-            }
-        }
-
-        .hit-effect {
+        .damage-text {
             position: absolute;
             color: #ff4757;
-            font-size: 1.5em;
             font-weight: bold;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
             pointer-events: none;
-            animation: hitAnimation 0.5s ease-out forwards;
-            z-index: 15;
+            animation: damageFloat 1s ease-out forwards;
         }
 
-        @keyframes hitAnimation {
+        @keyframes damageFloat {
             0% {
                 opacity: 1;
-                transform: scale(1) translateY(0);
+                transform: translateY(0);
             }
             100% {
                 opacity: 0;
-                transform: scale(1.5) translateY(-30px);
+                transform: translateY(-50px);
             }
         }
 
@@ -239,741 +353,830 @@
             position: absolute;
             width: 4px;
             height: 4px;
-            background: #ff4757;
+            background: #ffd700;
             border-radius: 50%;
             pointer-events: none;
-            animation: particleAnimation 0.6s ease-out forwards;
-            z-index: 15;
+            animation: particleExplode 0.8s ease-out forwards;
         }
 
-        @keyframes particleAnimation {
+        @keyframes particleExplode {
             0% {
                 opacity: 1;
                 transform: scale(1);
             }
             100% {
                 opacity: 0;
-                transform: scale(0) translate(var(--tx), var(--ty));
+                transform: scale(0) translate(var(--dx), var(--dy));
             }
-        }
-
-        .game-title {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 2.5em;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-            z-index: 10;
         }
     </style>
 </head>
 <body>
-    <div class="game-container">
-        <h1 class="game-title">🔥 火柴人打斗 🔥</h1>
-        
-        <canvas id="gameCanvas" class="game-canvas"></canvas>
-        
-        <div class="ui-overlay">
-            <div class="health-bars">
-                <div class="health-bar">
-                    <div class="health-fill player1" id="health1" style="width: 100%"></div>
-                    <div class="health-text" id="healthText1">100/100</div>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div class="ui-overlay">
+        <div class="health-bars">
+            <div class="health-text">玩家</div>
+            <div class="health-bar player1-health">
+                <div class="health-fill" style="width: 100%"></div>
+            </div>
+            <div class="health-text">AI</div>
+            <div class="health-bar player2-health">
+                <div class="health-fill" style="width: 100%"></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h3>🎮 操作说明</h3>
+            <p><strong>W</strong> - 跳跃</p>
+            <p><strong>A/D</strong> - 左右移动</p>
+            <p><strong>I</strong> - 飞镖攻击</p>
+            <p><strong>O</strong> - 瞬移技能</p>
+            <p><strong>ESC</strong> - 设置菜单</p>
+        </div>
+
+        <div class="skill-cooldowns">
+            <div class="skill-cooldown">
+                <div class="skill-icon dart">I</div>
+                <div class="cooldown-bar">
+                    <div class="cooldown-fill" style="width: 100%"></div>
                 </div>
-                <div class="health-bar">
-                    <div class="health-fill player2" id="health2" style="width: 100%"></div>
-                    <div class="health-text" id="healthText2">100/100</div>
+            </div>
+            <div class="skill-cooldown">
+                <div class="skill-icon teleport">O</div>
+                <div class="cooldown-bar">
+                    <div class="cooldown-fill" style="width: 100%"></div>
                 </div>
             </div>
         </div>
-        
-        <div class="controls-info">
-            <strong>控制说明：</strong><br>
-            <strong>WASD</strong> - 移动 | <strong>Q</strong> - 飞镖 | <strong>E</strong> - 瞬移 | <strong>ESC</strong> - 设置
-        </div>
-        
-        <div class="skill-cooldown" id="skillCooldown" style="display: none;">
-            <div>技能冷却</div>
-            <div class="cooldown-bar">
-                <div class="cooldown-fill" id="cooldownFill" style="width: 0%"></div>
-            </div>
-        </div>
-        
-        <div class="game-status" id="gameStatus">
-            <div id="statusText">准备开始！按任意键开始游戏</div>
-            <button onclick="restartGame()" style="margin-top: 20px; background: linear-gradient(45deg, #ff6b6b, #ff8e8e); color: white; border: none; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer;">重新开始</button>
-        </div>
-        
-        <div class="settings-menu" id="settingsMenu">
+
+        <div class="settings-menu">
             <h2>⚙️ 游戏设置</h2>
-            <div style="margin-bottom: 20px;">
-                <button onclick="toggleSound()" id="soundBtn">🔊 音效: 开</button>
-                <button onclick="toggleMusic()" id="musicBtn">🎵 音乐: 开</button>
+            <div class="setting-item">
+                <label>音效</label>
+                <div class="toggle-switch" id="soundToggle"></div>
             </div>
-            <div style="margin-bottom: 20px;">
-                <button onclick="adjustDifficulty('easy')">简单模式</button>
-                <button onclick="adjustDifficulty('normal')">普通模式</button>
-                <button onclick="adjustDifficulty('hard')">困难模式</button>
+            <div class="setting-item">
+                <label>音乐</label>
+                <div class="toggle-switch" id="musicToggle"></div>
             </div>
-            <button onclick="closeSettings()">关闭设置</button>
+            <div class="setting-item">
+                <label>AI难度</label>
+                <select class="difficulty-select" id="difficultySelect">
+                    <option value="easy">简单</option>
+                    <option value="normal" selected>普通</option>
+                    <option value="hard">困难</option>
+                </select>
+            </div>
+            <button class="restart-btn" onclick="restartGame()">重新开始</button>
+        </div>
+
+        <div class="game-over">
+            <h2 id="gameOverTitle">游戏结束</h2>
+            <p id="gameOverMessage">获胜者</p>
+            <button class="restart-btn" onclick="restartGame()">再来一局</button>
+        </div>
+
+        <div class="start-screen" id="startScreen">
+            <h1>🔥 火柴人打斗</h1>
+            <p>使用WASD移动，I键飞镖，O键瞬移</p>
+            <button class="start-btn" onclick="startGame()">开始游戏</button>
         </div>
     </div>
 
     <script>
-        // 游戏画布和上下文
+        // 游戏配置
+        const GAME_CONFIG = {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            gravity: 0.8,
+            groundY: window.innerHeight - 100,
+            playerSpeed: 4,
+            runSpeed: 6,
+            jumpPower: 15,
+            dartSpeed: 8,
+            dartDamage: 15,
+            meleeDamage: 10,
+            teleportDistance: 100
+        };
+
+        // 游戏状态
+        let gameState = {
+            isRunning: false,
+            isPaused: false,
+            gameOver: false,
+            winner: null,
+            settings: {
+                sound: true,
+                music: true,
+                difficulty: 'normal'
+            }
+        };
+
+        // 获取画布和上下文
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        
-        // 设置画布大小为全屏
+
+        // 调整画布大小
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
+            GAME_CONFIG.width = window.innerWidth;
+            GAME_CONFIG.height = window.innerHeight;
+            GAME_CONFIG.groundY = window.innerHeight - 100;
         }
-        
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-        
-        // 游戏状态
-        let gameState = {
-            started: false,
-            gameOver: false,
-            winner: null,
-            settingsOpen: false,
-            soundEnabled: true,
-            musicEnabled: true,
-            difficulty: 'normal'
-        };
-        
-        // 飞镖类
-        class Dart {
-            constructor(x, y, direction, owner) {
-                this.x = x;
-                this.y = y;
-                this.speed = 8;
-                this.direction = direction;
-                this.owner = owner;
-                this.width = 8;
-                this.height = 2;
-                this.active = true;
-            }
-            
-            update() {
-                this.x += this.speed * this.direction;
-                
-                // 检查边界
-                if (this.x < 0 || this.x > canvas.width) {
-                    this.active = false;
-                }
-            }
-            
-            draw() {
-                ctx.save();
-                ctx.fillStyle = '#ff6b6b';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-                ctx.restore();
-            }
-            
-            checkCollision(player) {
-                if (this.owner === player) return false;
-                
-                return this.x < player.x + player.width &&
-                       this.x + this.width > player.x &&
-                       this.y < player.y + player.height &&
-                       this.y + this.height > player.y;
-            }
-        }
-        
+
         // 玩家类
         class Player {
-            constructor(x, y, color, isPlayer1) {
+            constructor(x, y, color, isAI = false) {
                 this.x = x;
                 this.y = y;
                 this.width = 30;
                 this.height = 60;
                 this.color = color;
+                this.isAI = isAI;
                 this.health = 100;
                 this.maxHealth = 100;
-                this.speed = 4;
-                this.runSpeed = 6;
-                this.jumpPower = 15;
+                this.velocityX = 0;
                 this.velocityY = 0;
                 this.onGround = false;
+                this.facingRight = !isAI;
                 this.attacking = false;
                 this.attackCooldown = 0;
-                this.facing = 1; // 1 = 右, -1 = 左
-                this.animationFrame = 0;
-                this.hitCooldown = 0;
-                this.isPlayer1 = isPlayer1;
-                
-                // 技能相关
                 this.dartCooldown = 0;
                 this.teleportCooldown = 0;
+                this.animationFrame = 0;
                 this.isRunning = false;
                 this.isJumping = false;
-                this.jumpStartY = 0;
+                this.hitFlash = 0;
+                this.lastAction = 0;
+                this.aiState = 'idle';
+                this.aiTimer = 0;
+                this.targetX = x;
             }
-            
+
             update() {
-                // 重力
-                this.velocityY += 0.8;
-                this.y += this.velocityY;
+                // 更新动画帧
+                this.animationFrame++;
                 
-                // 地面碰撞
-                if (this.y + this.height > canvas.height - 50) {
-                    this.y = canvas.height - 50 - this.height;
+                // 应用重力
+                if (!this.onGround) {
+                    this.velocityY += GAME_CONFIG.gravity;
+                }
+
+                // 更新位置
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+
+                // 地面碰撞检测
+                if (this.y >= GAME_CONFIG.groundY - this.height) {
+                    this.y = GAME_CONFIG.groundY - this.height;
                     this.velocityY = 0;
                     this.onGround = true;
                     this.isJumping = false;
-                } else {
+                }
+
+                // 边界检测
+                if (this.x < 0) this.x = 0;
+                if (this.x > GAME_CONFIG.width - this.width) {
+                    this.x = GAME_CONFIG.width - this.width;
+                }
+
+                // 更新冷却时间
+                if (this.attackCooldown > 0) this.attackCooldown--;
+                if (this.dartCooldown > 0) this.dartCooldown--;
+                if (this.teleportCooldown > 0) this.teleportCooldown--;
+
+                // 更新受击闪烁
+                if (this.hitFlash > 0) this.hitFlash--;
+
+                // AI行为
+                if (this.isAI) {
+                    this.updateAI();
+                }
+
+                // 更新移动状态
+                this.isRunning = Math.abs(this.velocityX) > 0;
+            }
+
+            updateAI() {
+                const player = gameState.isRunning ? players[0] : null;
+                if (!player) return;
+
+                this.aiTimer++;
+
+                // 根据难度调整AI行为
+                const difficulty = gameState.settings.difficulty;
+                let reactionTime = 30;
+                let skillChance = 0.1;
+
+                switch (difficulty) {
+                    case 'easy':
+                        reactionTime = 60;
+                        skillChance = 0.05;
+                        break;
+                    case 'hard':
+                        reactionTime = 15;
+                        skillChance = 0.2;
+                        break;
+                }
+
+                // 距离计算
+                const distance = Math.abs(this.x - player.x);
+                const direction = this.x < player.x ? 1 : -1;
+
+                // AI状态机
+                switch (this.aiState) {
+                    case 'idle':
+                        if (this.aiTimer > reactionTime) {
+                            this.aiState = 'approach';
+                            this.aiTimer = 0;
+                        }
+                        break;
+
+                    case 'approach':
+                        // 接近玩家
+                        this.velocityX = direction * GAME_CONFIG.playerSpeed;
+                        this.facingRight = direction > 0;
+
+                        // 如果距离合适，切换到攻击状态
+                        if (distance < 150 && distance > 50) {
+                            this.aiState = 'attack';
+                            this.aiTimer = 0;
+                        }
+
+                        // 随机跳跃
+                        if (Math.random() < 0.02 && this.onGround) {
+                            this.jump();
+                        }
+
+                        // 随机使用技能
+                        if (Math.random() < skillChance) {
+                            if (this.dartCooldown === 0 && distance > 80) {
+                                this.shootDart();
+                            } else if (this.teleportCooldown === 0) {
+                                this.teleport();
+                            }
+                        }
+                        break;
+
+                    case 'attack':
+                        // 攻击行为
+                        if (distance < 50) {
+                            this.attack();
+                        } else if (distance > 200) {
+                            this.aiState = 'approach';
+                        } else {
+                            // 保持距离
+                            if (distance < 80) {
+                                this.velocityX = -direction * GAME_CONFIG.playerSpeed;
+                            } else if (distance > 120) {
+                                this.velocityX = direction * GAME_CONFIG.playerSpeed;
+                            }
+                        }
+
+                        // 随机跳跃躲避
+                        if (Math.random() < 0.03 && this.onGround) {
+                            this.jump();
+                        }
+
+                        this.aiTimer++;
+                        if (this.aiTimer > 120) {
+                            this.aiState = 'idle';
+                            this.aiTimer = 0;
+                        }
+                        break;
+                }
+
+                // 躲避飞镖
+                darts.forEach(dart => {
+                    if (dart.owner !== this && Math.abs(dart.x - this.x) < 100 && Math.abs(dart.y - this.y) < 50) {
+                        if (this.onGround && Math.random() < 0.1) {
+                            this.jump();
+                        }
+                    }
+                });
+            }
+
+            jump() {
+                if (this.onGround) {
+                    this.velocityY = -GAME_CONFIG.jumpPower;
                     this.onGround = false;
+                    this.isJumping = true;
                 }
-                
-                // 攻击冷却
-                if (this.attackCooldown > 0) {
-                    this.attackCooldown--;
-                }
-                
-                // 受击冷却
-                if (this.hitCooldown > 0) {
-                    this.hitCooldown--;
-                }
-                
-                // 技能冷却
-                if (this.dartCooldown > 0) {
-                    this.dartCooldown--;
-                }
-                if (this.teleportCooldown > 0) {
-                    this.teleportCooldown--;
-                }
-                
-                // 动画帧
-                this.animationFrame++;
-                
-                // 更新技能冷却显示
-                this.updateSkillCooldown();
             }
-            
-            draw() {
-                ctx.save();
-                
-                // 受击闪烁效果
-                if (this.hitCooldown > 0 && this.hitCooldown % 4 < 2) {
-                    ctx.globalAlpha = 0.5;
-                }
-                
-                // 绘制火柴人
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = 4;
-                ctx.lineCap = 'round';
-                
-                const centerX = this.x + this.width / 2;
-                const headY = this.y + 15;
-                
-                // 头部
-                ctx.beginPath();
-                ctx.arc(centerX, headY, 12, 0, Math.PI * 2);
-                ctx.stroke();
-                
-                // 身体
-                ctx.beginPath();
-                ctx.moveTo(centerX, headY + 12);
-                ctx.lineTo(centerX, this.y + this.height - 15);
-                ctx.stroke();
-                
-                // 手臂动画
-                let armAngle = 0;
-                if (this.attacking) {
-                    armAngle = Math.PI / 4;
-                } else if (this.isRunning) {
-                    armAngle = Math.sin(this.animationFrame * 0.3) * 0.5;
-                } else {
-                    armAngle = Math.sin(this.animationFrame * 0.1) * 0.2;
-                }
-                
-                ctx.beginPath();
-                ctx.moveTo(centerX, headY + 20);
-                ctx.lineTo(centerX - 20 * Math.cos(armAngle), headY + 20 - 20 * Math.sin(armAngle));
-                ctx.moveTo(centerX, headY + 20);
-                ctx.lineTo(centerX + 20 * Math.cos(armAngle), headY + 20 - 20 * Math.sin(armAngle));
-                ctx.stroke();
-                
-                // 腿部动画
-                let legAngle = 0;
-                if (this.isRunning) {
-                    legAngle = Math.sin(this.animationFrame * 0.4) * 0.6;
-                } else if (this.isJumping) {
-                    legAngle = Math.PI / 6;
-                } else {
-                    legAngle = Math.sin(this.animationFrame * 0.15) * 0.3;
-                }
-                
-                ctx.beginPath();
-                ctx.moveTo(centerX, this.y + this.height - 15);
-                ctx.lineTo(centerX - 18 * Math.cos(legAngle), this.y + this.height + 18 * Math.sin(legAngle));
-                ctx.moveTo(centerX, this.y + this.height - 15);
-                ctx.lineTo(centerX + 18 * Math.cos(legAngle), this.y + this.height + 18 * Math.sin(legAngle));
-                ctx.stroke();
-                
-                // 攻击效果
-                if (this.attacking) {
-                    ctx.strokeStyle = '#ff4757';
-                    ctx.lineWidth = 3;
-                    ctx.beginPath();
-                    ctx.moveTo(centerX + 20 * this.facing, headY + 20);
-                    ctx.lineTo(centerX + 40 * this.facing, headY + 20);
-                    ctx.stroke();
-                }
-                
-                ctx.restore();
-            }
-            
+
             attack() {
                 if (this.attackCooldown === 0) {
                     this.attacking = true;
                     this.attackCooldown = 20;
+
+                    // 检测攻击碰撞
+                    const target = this.isAI ? players[0] : players[1];
+                    const distance = Math.abs(this.x - target.x);
+                    const direction = this.facingRight ? 1 : -1;
+                    const attackRange = 60;
+
+                    if (distance < attackRange && 
+                        ((direction > 0 && target.x > this.x) || (direction < 0 && target.x < this.x))) {
+                        this.dealDamage(target, GAME_CONFIG.meleeDamage);
+                    }
+
                     setTimeout(() => {
                         this.attacking = false;
                     }, 200);
                 }
             }
-            
-            throwDart() {
+
+            shootDart() {
                 if (this.dartCooldown === 0) {
-                    const dartX = this.x + this.width / 2 + 20 * this.facing;
-                    const dartY = this.y + this.height / 2;
-                    const dart = new Dart(dartX, dartY, this.facing, this);
+                    const direction = this.facingRight ? 1 : -1;
+                    const dart = new Dart(
+                        this.x + (this.facingRight ? this.width : 0),
+                        this.y + this.height / 2,
+                        direction,
+                        this
+                    );
                     darts.push(dart);
                     this.dartCooldown = 60; // 1秒冷却
                 }
             }
-            
+
             teleport() {
                 if (this.teleportCooldown === 0) {
-                    const teleportDistance = 100;
-                    const newX = this.x + teleportDistance * this.facing;
+                    const direction = this.facingRight ? 1 : -1;
+                    const newX = this.x + direction * GAME_CONFIG.teleportDistance;
                     
-                    if (newX >= 0 && newX + this.width <= canvas.width) {
-                        // 创建瞬移效果
-                        this.createTeleportEffect(this.x + this.width / 2, this.y + this.height / 2);
-                        
+                    if (newX >= 0 && newX <= GAME_CONFIG.width - this.width) {
                         this.x = newX;
-                        this.teleportCooldown = 120; // 2秒冷却
-                        
-                        // 创建目标位置效果
-                        setTimeout(() => {
-                            this.createTeleportEffect(this.x + this.width / 2, this.y + this.height / 2);
-                        }, 100);
+                        createTeleportEffect(this.x, this.y);
                     }
+                    
+                    this.teleportCooldown = 120; // 2秒冷却
                 }
             }
-            
-            createTeleportEffect(x, y) {
-                const effect = document.createElement('div');
-                effect.className = 'teleport-effect';
-                effect.style.left = (x - 20 + canvas.offsetLeft) + 'px';
-                effect.style.top = (y - 20 + canvas.offsetTop) + 'px';
-                document.body.appendChild(effect);
-                
-                setTimeout(() => {
-                    if (document.body.contains(effect)) {
-                        document.body.removeChild(effect);
-                    }
-                }, 300);
-            }
-            
-            takeDamage(damage) {
-                this.health = Math.max(0, this.health - damage);
-                this.hitCooldown = 20;
-                this.createHitEffect();
-            }
-            
-            createHitEffect() {
-                const centerX = this.x + this.width / 2;
-                const centerY = this.y + this.height / 2;
+
+            dealDamage(target, damage) {
+                target.health = Math.max(0, target.health - damage);
+                target.hitFlash = 10;
                 
                 // 创建伤害数字
-                const hitText = document.createElement('div');
-                hitText.className = 'hit-effect';
-                hitText.textContent = '-10';
-                hitText.style.left = (centerX + canvas.offsetLeft) + 'px';
-                hitText.style.top = (centerY + canvas.offsetTop) + 'px';
-                document.body.appendChild(hitText);
-                
-                setTimeout(() => {
-                    document.body.removeChild(hitText);
-                }, 500);
+                createDamageText(target.x + target.width / 2, target.y, damage);
                 
                 // 创建粒子效果
-                for (let i = 0; i < 8; i++) {
-                    this.createParticle(centerX, centerY);
-                }
-            }
-            
-            createParticle(x, y) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
-                particle.style.left = (x + canvas.offsetLeft) + 'px';
-                particle.style.top = (y + canvas.offsetTop) + 'px';
-                particle.style.setProperty('--tx', (Math.random() * 100 - 50) + 'px');
-                particle.style.setProperty('--ty', (Math.random() * 100 - 50) + 'px');
-                document.body.appendChild(particle);
-                
-                setTimeout(() => {
-                    if (document.body.contains(particle)) {
-                        document.body.removeChild(particle);
-                    }
-                }, 600);
-            }
-            
-            updateSkillCooldown() {
-                const cooldownElement = document.getElementById('skillCooldown');
-                const cooldownFill = document.getElementById('cooldownFill');
-                
-                if (this.isPlayer1) {
-                    const maxCooldown = Math.max(this.dartCooldown, this.teleportCooldown);
-                    const maxCooldownTime = 120; // 最大冷却时间
-                    
-                    if (maxCooldown > 0) {
-                        cooldownElement.style.display = 'block';
-                        cooldownFill.style.width = (maxCooldown / maxCooldownTime * 100) + '%';
-                    } else {
-                        cooldownElement.style.display = 'none';
-                    }
-                }
-            }
-        }
-        
-        // 创建玩家
-        const player1 = new Player(100, 200, '#ff6b6b', true);
-        const player2 = new Player(canvas.width - 130, 200, '#3742fa', false);
-        
-        // 飞镖数组
-        const darts = [];
-        
-        // 按键状态
-        const keys = {};
-        
-        // 事件监听
-        document.addEventListener('keydown', (e) => {
-            keys[e.code] = true;
-            
-            if (!gameState.started && !gameState.settingsOpen) {
-                startGame();
-            }
-            
-            // ESC键处理
-            if (e.code === 'Escape') {
-                e.preventDefault();
-                if (gameState.settingsOpen) {
-                    closeSettings();
-                } else {
-                    openSettings();
-                }
-            }
-        });
-        
-        document.addEventListener('keyup', (e) => {
-            keys[e.code] = false;
-        });
-        
-        // 开始游戏
-        function startGame() {
-            gameState.started = true;
-            gameState.gameOver = false;
-            gameState.winner = null;
-            updateGameStatus();
-        }
-        
-        // 重新开始游戏
-        function restartGame() {
-            player1.health = 100;
-            player2.health = 100;
-            player1.x = 100;
-            player1.y = 200;
-            player2.x = canvas.width - 130;
-            player2.y = 200;
-            player1.velocityY = 0;
-            player2.velocityY = 0;
-            player1.attacking = false;
-            player2.attacking = false;
-            player1.attackCooldown = 0;
-            player2.attackCooldown = 0;
-            player1.hitCooldown = 0;
-            player2.hitCooldown = 0;
-            player1.dartCooldown = 0;
-            player1.teleportCooldown = 0;
-            player2.dartCooldown = 0;
-            player2.teleportCooldown = 0;
-            
-            // 清除所有飞镖
-            darts.length = 0;
-            
-            gameState.started = true;
-            gameState.gameOver = false;
-            gameState.winner = null;
-            updateGameStatus();
-        }
-        
-        // 处理输入
-        function handleInput() {
-            // 玩家1控制 (WASD + QE)
-            if (keys['KeyA']) {
-                player1.x -= player1.isRunning ? player1.runSpeed : player1.speed;
-                player1.facing = -1;
-                player1.isRunning = true;
-            } else if (keys['KeyD']) {
-                player1.x += player1.isRunning ? player1.runSpeed : player1.speed;
-                player1.facing = 1;
-                player1.isRunning = true;
-            } else {
-                player1.isRunning = false;
-            }
-            
-            if (keys['KeyW'] && player1.onGround) {
-                player1.velocityY = -player1.jumpPower;
-                player1.isJumping = true;
-                player1.jumpStartY = player1.y;
-            }
-            
-            if (keys['KeyS']) {
-                // 蹲下动作（可选）
-            }
-            
-            if (keys['KeyQ']) {
-                player1.throwDart();
-            }
-            
-            if (keys['KeyE']) {
-                player1.teleport();
-            }
-            
-            // 玩家2控制 (AI控制)
-            handleAIInput();
-            
-            // 边界限制
-            player1.x = Math.max(0, Math.min(canvas.width - player1.width, player1.x));
-            player2.x = Math.max(0, Math.min(canvas.width - player2.width, player2.x));
-        }
-        
-        // AI控制
-        function handleAIInput() {
-            const distance = Math.abs(player1.x - player2.x);
-            
-            // 简单的AI行为
-            if (distance > 150) {
-                // 距离太远，靠近玩家
-                if (player1.x > player2.x) {
-                    player2.x += player2.speed;
-                    player2.facing = 1;
-                } else {
-                    player2.x -= player2.speed;
-                    player2.facing = -1;
-                }
-            } else if (distance < 80) {
-                // 距离太近，后退
-                if (player1.x > player2.x) {
-                    player2.x -= player2.speed;
-                    player2.facing = -1;
-                } else {
-                    player2.x += player2.speed;
-                    player2.facing = 1;
-                }
-            }
-            
-            // 随机跳跃
-            if (Math.random() < 0.02 && player2.onGround) {
-                player2.velocityY = -player2.jumpPower;
-                player2.isJumping = true;
-            }
-            
-            // 随机攻击
-            if (Math.random() < 0.03) {
-                player2.attack();
-            }
-            
-            // 随机使用技能
-            if (Math.random() < 0.01) {
-                player2.throwDart();
-            }
-            if (Math.random() < 0.005) {
-                player2.teleport();
-            }
-        }
-        
-        // 碰撞检测
-        function checkCollisions() {
-            // 攻击碰撞检测
-            if (player1.attacking && player1.attackCooldown > 15) {
-                const attackX = player1.x + player1.width / 2 + 20 * player1.facing;
-                const attackY = player1.y + 35;
-                
-                if (Math.abs(attackX - (player2.x + player2.width / 2)) < 25 &&
-                    Math.abs(attackY - (player2.y + player2.height / 2)) < 25) {
-                    player2.takeDamage(10);
-                }
-            }
-            
-            if (player2.attacking && player2.attackCooldown > 15) {
-                const attackX = player2.x + player2.width / 2 + 20 * player2.facing;
-                const attackY = player2.y + 35;
-                
-                if (Math.abs(attackX - (player1.x + player1.width / 2)) < 25 &&
-                    Math.abs(attackY - (player1.y + player1.height / 2)) < 25) {
-                    player1.takeDamage(10);
-                }
-            }
-            
-            // 飞镖碰撞检测
-            for (let i = darts.length - 1; i >= 0; i--) {
-                const dart = darts[i];
-                dart.update();
-                
-                if (dart.checkCollision(player1)) {
-                    player1.takeDamage(15);
-                    dart.active = false;
-                } else if (dart.checkCollision(player2)) {
-                    player2.takeDamage(15);
-                    dart.active = false;
-                }
-                
-                if (!dart.active) {
-                    darts.splice(i, 1);
-                }
-            }
-        }
-        
-        // 检查游戏结束
-        function checkGameOver() {
-            if (player1.health <= 0 || player2.health <= 0) {
-                gameState.gameOver = true;
-                gameState.winner = player1.health <= 0 ? '玩家2' : '玩家1';
-                updateGameStatus();
-            }
-        }
-        
-        // 更新游戏状态显示
-        function updateGameStatus() {
-            const statusElement = document.getElementById('gameStatus');
-            const statusText = document.getElementById('statusText');
-            
-            if (!gameState.started) {
-                statusText.textContent = '准备开始！按任意键开始游戏';
-                statusElement.style.display = 'block';
-            } else if (gameState.gameOver) {
-                statusText.textContent = `游戏结束！${gameState.winner} 获胜！`;
-                statusElement.style.display = 'block';
-            } else {
-                statusElement.style.display = 'none';
-            }
-        }
-        
-        // 更新血量条
-        function updateHealthBars() {
-            document.getElementById('health1').style.width = (player1.health / player1.maxHealth * 100) + '%';
-            document.getElementById('health2').style.width = (player2.health / player2.maxHealth * 100) + '%';
-            document.getElementById('healthText1').textContent = `${player1.health}/${player1.maxHealth}`;
-            document.getElementById('healthText2').textContent = `${player2.health}/${player2.maxHealth}`;
-        }
-        
-        // 绘制背景
-        function drawBackground() {
-            // 深色渐变背景
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, '#1a1a2e');
-            gradient.addColorStop(0.5, '#16213e');
-            gradient.addColorStop(1, '#0f3460');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // 地面
-            ctx.fillStyle = '#2c3e50';
-            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
-            
-            // 装饰性元素
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-            for (let i = 0; i < 5; i++) {
-                const x = (canvas.width / 4) * i;
-                const y = canvas.height - 30;
-                ctx.beginPath();
-                ctx.arc(x, y, 3, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-        
-        // 设置菜单功能
-        function openSettings() {
-            gameState.settingsOpen = true;
-            document.getElementById('settingsMenu').style.display = 'block';
-        }
-        
-        function closeSettings() {
-            gameState.settingsOpen = false;
-            document.getElementById('settingsMenu').style.display = 'none';
-        }
-        
-        function toggleSound() {
-            gameState.soundEnabled = !gameState.soundEnabled;
-            document.getElementById('soundBtn').textContent = `🔊 音效: ${gameState.soundEnabled ? '开' : '关'}`;
-        }
-        
-        function toggleMusic() {
-            gameState.musicEnabled = !gameState.musicEnabled;
-            document.getElementById('musicBtn').textContent = `🎵 音乐: ${gameState.musicEnabled ? '开' : '关'}`;
-        }
-        
-        function adjustDifficulty(level) {
-            gameState.difficulty = level;
-            // 根据难度调整AI行为
-            if (level === 'easy') {
-                player2.speed = 3;
-            } else if (level === 'normal') {
-                player2.speed = 4;
-            } else if (level === 'hard') {
-                player2.speed = 5;
-            }
-        }
-        
-        // 游戏主循环
-        function gameLoop() {
-            // 清空画布
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // 绘制背景
-            drawBackground();
-            
-            if (gameState.started && !gameState.gameOver && !gameState.settingsOpen) {
-                // 处理输入
-                handleInput();
-                
-                // 更新玩家
-                player1.update();
-                player2.update();
-                
-                // 检查碰撞
-                checkCollisions();
+                createParticleExplosion(target.x + target.width / 2, target.y + target.height / 2);
                 
                 // 检查游戏结束
-                checkGameOver();
+                if (target.health <= 0) {
+                    gameState.gameOver = true;
+                    gameState.winner = this.isAI ? 'AI' : '玩家';
+                    showGameOver();
+                }
             }
+
+            draw() {
+                ctx.save();
+                
+                // 受击闪烁效果
+                if (this.hitFlash > 0) {
+                    ctx.globalAlpha = 0.5;
+                }
+
+                // 计算动画角度
+                let armAngle = 0;
+                let legAngle = 0;
+
+                // 奔跑动画
+                if (this.isRunning) {
+                    armAngle = Math.sin(this.animationFrame * 0.3) * 0.5;
+                    legAngle = Math.sin(this.animationFrame * 0.4) * 0.6;
+                }
+
+                // 跳跃动画
+                if (this.isJumping) {
+                    legAngle = Math.PI / 6;
+                }
+
+                // 攻击动画
+                if (this.attacking) {
+                    armAngle = Math.PI / 4;
+                }
+
+                // 绘制火柴人
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+
+                // 头部
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + 10, 8, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 身体
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y + 18);
+                ctx.lineTo(this.x + this.width / 2, this.y + 45);
+                ctx.stroke();
+
+                // 手臂
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y + 25);
+                ctx.lineTo(this.x + this.width / 2 + Math.cos(armAngle) * 15, this.y + 25 + Math.sin(armAngle) * 15);
+                ctx.moveTo(this.x + this.width / 2, this.y + 25);
+                ctx.lineTo(this.x + this.width / 2 - Math.cos(armAngle) * 15, this.y + 25 - Math.sin(armAngle) * 15);
+                ctx.stroke();
+
+                // 腿部
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y + 45);
+                ctx.lineTo(this.x + this.width / 2 + Math.cos(legAngle) * 15, this.y + 45 + Math.sin(legAngle) * 15);
+                ctx.moveTo(this.x + this.width / 2, this.y + 45);
+                ctx.lineTo(this.x + this.width / 2 - Math.cos(legAngle) * 15, this.y + 45 - Math.sin(legAngle) * 15);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        // 飞镖类
+        class Dart {
+            constructor(x, y, direction, owner) {
+                this.x = x;
+                this.y = y;
+                this.direction = direction;
+                this.owner = owner;
+                this.speed = GAME_CONFIG.dartSpeed;
+                this.width = 8;
+                this.height = 8;
+            }
+
+            update() {
+                this.x += this.direction * this.speed;
+
+                // 检查边界
+                if (this.x < 0 || this.x > GAME_CONFIG.width) {
+                    return false;
+                }
+
+                // 检查碰撞
+                const target = this.owner.isAI ? players[0] : players[1];
+                if (this.checkCollision(target)) {
+                    this.owner.dealDamage(target, GAME_CONFIG.dartDamage);
+                    return false;
+                }
+
+                return true;
+            }
+
+            checkCollision(target) {
+                return this.x < target.x + target.width &&
+                       this.x + this.width > target.x &&
+                       this.y < target.y + target.height &&
+                       this.y + this.height > target.y;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.fillStyle = this.owner.isAI ? '#3742fa' : '#ff6b6b';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 飞镖轨迹
+                ctx.strokeStyle = this.owner.isAI ? '#00d2ff' : '#ff4757';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y + this.height / 2);
+                ctx.lineTo(this.x + this.width / 2 - this.direction * 20, this.y + this.height / 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        // 游戏对象
+        let players = [];
+        let darts = [];
+        let damageTexts = [];
+        let particles = [];
+
+        // 创建玩家
+        function createPlayers() {
+            players = [
+                new Player(100, GAME_CONFIG.groundY - 60, '#ff6b6b', false),
+                new Player(GAME_CONFIG.width - 130, GAME_CONFIG.groundY - 60, '#3742fa', true)
+            ];
+        }
+
+        // 创建伤害数字
+        function createDamageText(x, y, damage) {
+            const text = {
+                x: x,
+                y: y,
+                damage: damage,
+                life: 60,
+                velocityY: -2
+            };
+            damageTexts.push(text);
+        }
+
+        // 创建粒子爆炸效果
+        function createParticleExplosion(x, y) {
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 * i) / 8;
+                const speed = 3 + Math.random() * 2;
+                const particle = {
+                    x: x,
+                    y: y,
+                    velocityX: Math.cos(angle) * speed,
+                    velocityY: Math.sin(angle) * speed,
+                    life: 30 + Math.random() * 30,
+                    maxLife: 60
+                };
+                particles.push(particle);
+            }
+        }
+
+        // 创建瞬移效果
+        function createTeleportEffect(x, y) {
+            for (let i = 0; i < 12; i++) {
+                const angle = (Math.PI * 2 * i) / 12;
+                const speed = 2 + Math.random() * 3;
+                const particle = {
+                    x: x + 15,
+                    y: y + 30,
+                    velocityX: Math.cos(angle) * speed,
+                    velocityY: Math.sin(angle) * speed,
+                    life: 20 + Math.random() * 20,
+                    maxLife: 40,
+                    color: '#00d2ff'
+                };
+                particles.push(particle);
+            }
+        }
+
+        // 更新UI
+        function updateUI() {
+            // 更新血量条
+            const player1Health = document.querySelector('.player1-health .health-fill');
+            const player2Health = document.querySelector('.player2-health .health-fill');
             
-            // 绘制飞镖
+            if (players[0]) {
+                player1Health.style.width = (players[0].health / players[0].maxHealth * 100) + '%';
+            }
+            if (players[1]) {
+                player2Health.style.width = (players[1].health / players[1].maxHealth * 100) + '%';
+            }
+
+            // 更新技能冷却
+            const dartCooldown = document.querySelector('.skill-cooldown:nth-child(1) .cooldown-fill');
+            const teleportCooldown = document.querySelector('.skill-cooldown:nth-child(2) .cooldown-fill');
+            
+            if (players[0]) {
+                const dartPercent = Math.max(0, (60 - players[0].dartCooldown) / 60 * 100);
+                const teleportPercent = Math.max(0, (120 - players[0].teleportCooldown) / 120 * 100);
+                
+                dartCooldown.style.width = dartPercent + '%';
+                teleportCooldown.style.width = teleportPercent + '%';
+            }
+        }
+
+        // 绘制地面
+        function drawGround() {
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(0, GAME_CONFIG.groundY, GAME_CONFIG.width, GAME_CONFIG.height - GAME_CONFIG.groundY);
+            
+            // 地面纹理
+            ctx.strokeStyle = '#34495e';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < GAME_CONFIG.width; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(i, GAME_CONFIG.groundY);
+                ctx.lineTo(i, GAME_CONFIG.height);
+                ctx.stroke();
+            }
+        }
+
+        // 绘制粒子
+        function drawParticles() {
+            particles.forEach((particle, index) => {
+                particle.x += particle.velocityX;
+                particle.y += particle.velocityY;
+                particle.life--;
+
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                    return;
+                }
+
+                const alpha = particle.life / particle.maxLife;
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = particle.color || '#ffd700';
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        // 绘制伤害数字
+        function drawDamageTexts() {
+            damageTexts.forEach((text, index) => {
+                text.y += text.velocityY;
+                text.life--;
+
+                if (text.life <= 0) {
+                    damageTexts.splice(index, 1);
+                    return;
+                }
+
+                const alpha = text.life / 60;
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = '#ff4757';
+                ctx.font = 'bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(text.damage.toString(), text.x, text.y);
+                ctx.restore();
+            });
+        }
+
+        // 游戏主循环
+        function gameLoop() {
+            if (!gameState.isRunning || gameState.isPaused) return;
+
+            // 清空画布
+            ctx.clearRect(0, 0, GAME_CONFIG.width, GAME_CONFIG.height);
+
+            // 绘制背景
+            drawGround();
+
+            // 更新和绘制玩家
+            players.forEach(player => {
+                player.update();
+                player.draw();
+            });
+
+            // 更新和绘制飞镖
+            darts = darts.filter(dart => dart.update());
             darts.forEach(dart => dart.draw());
-            
-            // 绘制玩家
-            player1.draw();
-            player2.draw();
-            
+
+            // 绘制粒子效果
+            drawParticles();
+
+            // 绘制伤害数字
+            drawDamageTexts();
+
             // 更新UI
-            updateHealthBars();
-            
+            updateUI();
+
             // 继续循环
             requestAnimationFrame(gameLoop);
         }
-        
-        // 启动游戏循环
-        gameLoop();
+
+        // 键盘控制
+        const keys = {};
+
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+
+            if (e.key === 'Escape') {
+                toggleSettings();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // 处理玩家输入
+        function handleInput() {
+            if (!gameState.isRunning || !players[0]) return;
+
+            const player = players[0];
+
+            // 移动控制
+            if (keys['a']) {
+                player.velocityX = -GAME_CONFIG.playerSpeed;
+                player.facingRight = false;
+            } else if (keys['d']) {
+                player.velocityX = GAME_CONFIG.playerSpeed;
+                player.facingRight = true;
+            } else {
+                player.velocityX = 0;
+            }
+
+            // 奔跑
+            if (keys['a'] || keys['d']) {
+                player.velocityX *= 1.5;
+            }
+
+            // 跳跃
+            if (keys['w']) {
+                player.jump();
+            }
+
+            // 攻击
+            if (keys[' ']) {
+                player.attack();
+            }
+
+            // 技能
+            if (keys['i']) {
+                player.shootDart();
+            }
+
+            if (keys['o']) {
+                player.teleport();
+            }
+        }
+
+        // 设置菜单控制
+        function toggleSettings() {
+            const settingsMenu = document.querySelector('.settings-menu');
+            if (settingsMenu.style.display === 'block') {
+                settingsMenu.style.display = 'none';
+                gameState.isPaused = false;
+            } else {
+                settingsMenu.style.display = 'block';
+                gameState.isPaused = true;
+            }
+        }
+
+        // 显示游戏结束
+        function showGameOver() {
+            const gameOver = document.querySelector('.game-over');
+            const title = document.getElementById('gameOverTitle');
+            const message = document.getElementById('gameOverMessage');
+
+            title.textContent = '游戏结束';
+            message.textContent = `${gameState.winner} 获胜！`;
+
+            gameOver.style.display = 'block';
+            gameState.isPaused = true;
+        }
+
+        // 开始游戏
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            gameState.isRunning = true;
+            gameState.gameOver = false;
+            gameState.winner = null;
+            
+            createPlayers();
+            darts = [];
+            damageTexts = [];
+            particles = [];
+            
+            gameLoop();
+        }
+
+        // 重新开始游戏
+        function restartGame() {
+            document.querySelector('.settings-menu').style.display = 'none';
+            document.querySelector('.game-over').style.display = 'none';
+            
+            gameState.isRunning = true;
+            gameState.isPaused = false;
+            gameState.gameOver = false;
+            gameState.winner = null;
+            
+            createPlayers();
+            darts = [];
+            damageTexts = [];
+            particles = [];
+            
+            gameLoop();
+        }
+
+        // 设置切换
+        document.getElementById('soundToggle').addEventListener('click', function() {
+            this.classList.toggle('active');
+            gameState.settings.sound = this.classList.contains('active');
+        });
+
+        document.getElementById('musicToggle').addEventListener('click', function() {
+            this.classList.toggle('active');
+            gameState.settings.music = this.classList.contains('active');
+        });
+
+        document.getElementById('difficultySelect').addEventListener('change', function() {
+            gameState.settings.difficulty = this.value;
+        });
+
+        // 初始化设置
+        document.getElementById('soundToggle').classList.add('active');
+        document.getElementById('musicToggle').classList.add('active');
+
+        // 窗口大小调整
+        window.addEventListener('resize', resizeCanvas);
+
+        // 初始化
+        resizeCanvas();
+
+        // 输入处理循环
+        setInterval(handleInput, 16);
     </script>
 </body>
 </html> 
