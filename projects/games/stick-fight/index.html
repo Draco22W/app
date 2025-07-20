@@ -469,14 +469,39 @@
             cooldownSound = document.getElementById('cooldownSound');
             failSound = document.getElementById('failSound');
             
-            // 设置初始音量
-            setVolume(0.7); // 音效音量
-            setBGMVolume(0.5); // 背景音乐音量稍低
+            // 音频将在用户交互后初始化
             
-            // 自动开始游戏
+            // 等待用户交互后开始游戏
+            let gameStarted = false;
+            
+            function startGameOnInteraction() {
+                if (!gameStarted) {
+                    gameStarted = true;
+                    initAudio(); // 初始化音频
+                    startGame();
+                }
+            }
+            
+            // 监听用户交互事件
+            document.addEventListener('click', startGameOnInteraction, { once: true });
+            document.addEventListener('keydown', startGameOnInteraction, { once: true });
+            document.addEventListener('touchstart', startGameOnInteraction, { once: true });
+            
+            // 如果5秒内没有交互，显示提示
             setTimeout(() => {
-                startGame();
-            }, 1000);
+                if (!gameStarted) {
+                    const startScreen = document.getElementById('startScreen');
+                    if (startScreen) {
+                        startScreen.innerHTML = `
+                            <div class="start-content">
+                                <h1>火柴人打斗游戏</h1>
+                                <p>点击任意位置开始游戏</p>
+                                <button class="start-btn" onclick="startGame()">开始游戏</button>
+                            </div>
+                        `;
+                    }
+                }
+            }, 5000);
         });
 
         // 游戏配置
@@ -1423,7 +1448,11 @@
             damageTexts = [];
             particles = [];
             
-            playBGM(); // 开始播放背景音乐
+            // 延迟播放背景音乐，确保用户已交互
+            setTimeout(() => {
+                playBGM();
+            }, 100);
+            
             gameLoop();
         }
 
@@ -1748,14 +1777,18 @@
             if (audio && id !== 'bgm') { // 不中断背景音乐
                 audio.pause();
                 audio.currentTime = 0;
-                audio.play();
+                audio.play().catch(error => {
+                    console.log('音效播放失败:', error);
+                });
             }
         }
 
         function playBGM() {
             const bgm = document.getElementById('bgm');
             if (bgm && gameState.settings.music) {
-                bgm.play();
+                bgm.play().catch(error => {
+                    console.log('背景音乐播放失败，需要用户交互:', error);
+                });
             }
         }
 
@@ -1765,6 +1798,19 @@
                 bgm.pause();
                 bgm.currentTime = 0;
             }
+        }
+
+        // 初始化音频（在用户交互后调用）
+        function initAudio() {
+            // 预加载所有音频
+            const audioElements = document.querySelectorAll('audio');
+            audioElements.forEach(audio => {
+                audio.load();
+            });
+            
+            // 设置音量
+            setVolume(0.7);
+            setBGMVolume(0.5);
         }
     </script>
 </body>
