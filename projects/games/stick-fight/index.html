@@ -1749,12 +1749,29 @@
             }
         }, 10000);
 
+        // 技能冷却状态跟踪
+        let lastDartCooldown = 1;
+        let lastTeleportCooldown = 1;
+        let lastUltimateCooldown = 1;
+
         // 技能冷却完毕时
         function checkSkillCooldowns() {
             if (players[0]) {
-                if (players[0].dartCooldown === 0) playSound('cooldownSound');
-                if (players[0].teleportCooldown === 0) playSound('cooldownSound');
-                if (players[0].ultimateCooldown === 0) playSound('cooldownSound');
+                // 只在冷却从非0变为0时播放音效
+                if (lastDartCooldown > 0 && players[0].dartCooldown === 0) {
+                    playSound('cooldownSound');
+                }
+                if (lastTeleportCooldown > 0 && players[0].teleportCooldown === 0) {
+                    playSound('cooldownSound');
+                }
+                if (lastUltimateCooldown > 0 && players[0].ultimateCooldown === 0) {
+                    playSound('cooldownSound');
+                }
+                
+                // 更新状态
+                lastDartCooldown = players[0].dartCooldown;
+                lastTeleportCooldown = players[0].teleportCooldown;
+                lastUltimateCooldown = players[0].ultimateCooldown;
             }
         }
         setInterval(checkSkillCooldowns, 1000/30);
@@ -1772,14 +1789,36 @@
         // 输入处理循环
         setInterval(handleInput, 16);
 
+        // 音效防重复播放
+        let lastPlayTime = {};
+        
+        // 不同音效的防重复时间（毫秒）
+        const soundCooldowns = {
+            'hitSound': 200,      // 攻击音效
+            'healSound': 500,     // 治疗音效
+            'comboSound': 1000,   // 连击音效
+            'cooldownSound': 300, // 冷却音效
+            'victorySound': 2000, // 胜利音效
+            'failSound': 2000,    // 失败音效
+            'laserSound': 300     // 激光音效
+        };
+        
         function playSound(id) {
             const audio = document.getElementById(id);
             if (audio && id !== 'bgm') { // 不中断背景音乐
-                audio.pause();
-                audio.currentTime = 0;
-                audio.play().catch(error => {
-                    console.log('音效播放失败:', error);
-                });
+                const now = Date.now();
+                const lastTime = lastPlayTime[id] || 0;
+                const cooldown = soundCooldowns[id] || 100;
+                
+                // 防止音效重复播放
+                if (now - lastTime > cooldown) {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.play().catch(error => {
+                        console.log('音效播放失败:', error);
+                    });
+                    lastPlayTime[id] = now;
+                }
             }
         }
 
