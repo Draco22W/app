@@ -445,16 +445,40 @@
     </div>
 
     <!-- 音频资源 -->
-    <audio id="bgm" src="audio/audio/火柴人大战.mp3" loop></audio>
-    <audio id="hitSound" src="audio/audio/hit.mp3"></audio>
-    <audio id="healSound" src="audio/audio/gold.mp3"></audio>
-    <audio id="laserSound" src="audio/audio/go.mp3"></audio>
-    <audio id="comboSound" src="audio/audio/gold.mp3"></audio>
-    <audio id="cooldownSound" src="audio/audio/tick.mp3"></audio>
-    <audio id="victorySound" src="audio/audio/win.mp3"></audio>
-    <audio id="failSound" src="audio/audio/timeout.mp3"></audio>
+    <audio id="bgm" src="./audio/audio/火柴人大战.mp3" loop preload="auto"></audio>
+    <audio id="hitSound" src="./audio/audio/hit.mp3" preload="auto"></audio>
+    <audio id="healSound" src="./audio/audio/gold.mp3" preload="auto"></audio>
+    <audio id="laserSound" src="./audio/audio/tick.mp3" preload="auto"></audio>
+    <audio id="comboSound" src="./audio/audio/go.mp3" preload="auto"></audio>
+    <audio id="cooldownSound" src="./audio/audio/timeout.mp3" preload="auto"></audio>
+    <audio id="victorySound" src="./audio/audio/win.mp3" preload="auto"></audio>
+    <audio id="failSound" src="./audio/audio/tick.mp3" preload="auto"></audio>
 
     <script>
+        // 音频元素初始化
+        let bgm, hitSound, healSound, laserSound, victorySound, comboSound, cooldownSound, failSound;
+        
+        // 等待DOM加载完成后初始化音频
+        document.addEventListener('DOMContentLoaded', function() {
+            bgm = document.getElementById('bgm');
+            hitSound = document.getElementById('hitSound');
+            healSound = document.getElementById('healSound');
+            laserSound = document.getElementById('laserSound');
+            victorySound = document.getElementById('victorySound');
+            comboSound = document.getElementById('comboSound');
+            cooldownSound = document.getElementById('cooldownSound');
+            failSound = document.getElementById('failSound');
+            
+            // 设置初始音量
+            setVolume(0.7); // 音效音量
+            setBGMVolume(0.5); // 背景音乐音量稍低
+            
+            // 自动开始游戏
+            setTimeout(() => {
+                startGame();
+            }, 1000);
+        });
+
         // 游戏配置
         const GAME_CONFIG = {
             width: window.innerWidth,
@@ -1446,10 +1470,6 @@
         // 初始化设置
         document.getElementById('soundToggle').classList.add('active');
         document.getElementById('musicToggle').classList.add('active');
-        
-        // 设置初始音量
-        setVolume(0.7); // 音效音量
-        setBGMVolume(0.5); // 背景音乐音量稍低
 
         // 窗口大小调整
         window.addEventListener('resize', resizeCanvas);
@@ -1675,23 +1695,15 @@
         }
 
         // 音量调节
-        let bgm = document.getElementById('bgm');
-        let hitSound = document.getElementById('hitSound');
-        let healSound = document.getElementById('healSound');
-        let laserSound = document.getElementById('laserSound');
-        let victorySound = document.getElementById('victorySound');
-        let comboSound = document.getElementById('comboSound');
-        let cooldownSound = document.getElementById('cooldownSound');
-        let failSound = document.getElementById('failSound');
         function setVolume(vol) {
-            bgm.volume = vol;
-            hitSound.volume = vol;
-            healSound.volume = vol;
-            laserSound.volume = vol;
-            victorySound.volume = vol;
-            comboSound.volume = vol;
-            cooldownSound.volume = vol;
-            failSound.volume = vol;
+            if (bgm) bgm.volume = vol;
+            if (hitSound) hitSound.volume = vol;
+            if (healSound) healSound.volume = vol;
+            if (laserSound) laserSound.volume = vol;
+            if (victorySound) victorySound.volume = vol;
+            if (comboSound) comboSound.volume = vol;
+            if (cooldownSound) cooldownSound.volume = vol;
+            if (failSound) failSound.volume = vol;
         }
 
         function setBGMVolume(vol) {
