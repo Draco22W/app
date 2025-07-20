@@ -455,6 +455,13 @@
         </div>
     </div>
 
+    <!-- 音频资源 -->
+    <audio id="bgm" src="https://cdn.pixabay.com/audio/2022/10/16/audio_12b5fae5b7.mp3" loop></audio>
+    <audio id="hitSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b7b7b.mp3"></audio>
+    <audio id="healSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b7b7b.mp3"></audio>
+    <audio id="laserSound" src="https://cdn.pixabay.com/audio/2022/10/16/audio_12b5fae5b7.mp3"></audio>
+    <audio id="victorySound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b7b7b.mp3"></audio>
+
     <script>
         // 游戏配置
         const GAME_CONFIG = {
@@ -904,6 +911,13 @@
                     return false;
                 }
 
+                // 障碍物碰撞
+                for (let o of obstacles) {
+                    if (this.x < o.x + o.width && this.x + this.width > o.x && this.y < o.y + o.height && this.y + this.height > o.y) {
+                        return false;
+                    }
+                }
+
                 return true;
             }
 
@@ -962,6 +976,13 @@
                     return false;
                 }
 
+                // 障碍物碰撞
+                for (let o of obstacles) {
+                    if (this.x < o.x + o.width && this.x + this.width > o.x && this.y < o.y + o.height && this.y + this.height > o.y) {
+                        return false;
+                    }
+                }
+
                 return true;
             }
 
@@ -1005,8 +1026,55 @@
         let players = [];
         let darts = [];
         let lasers = [];
+        let obstacles = [];
+        let healItems = [];
         let damageTexts = [];
         let particles = [];
+
+        // 障碍物类
+        class Obstacle {
+            constructor(x, y, w, h, color) {
+                this.x = x;
+                this.y = y;
+                this.width = w;
+                this.height = h;
+                this.color = color;
+            }
+            draw() {
+                ctx.save();
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.restore();
+            }
+        }
+
+        // 血包类
+        class HealItem {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 16;
+                this.life = 600; // 10秒
+            }
+            update() {
+                this.life--;
+                return this.life > 0;
+            }
+            draw() {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#4efc4e';
+                ctx.shadowColor = '#fff';
+                ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.font = 'bold 16px Arial';
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.fillText('+30', this.x, this.y + 5);
+                ctx.restore();
+            }
+        }
 
         // 创建玩家
         function createPlayers() {
@@ -1014,6 +1082,8 @@
                 new Player(100, GAME_CONFIG.groundY - 60, '#ff6b6b', false),
                 new Player(GAME_CONFIG.width - 130, GAME_CONFIG.groundY - 60, '#3742fa', true)
             ];
+            createObstacles();
+            healItems = [];
         }
 
         // 创建伤害数字
@@ -1195,6 +1265,11 @@
             lasers = lasers.filter(laser => laser.update());
             lasers.forEach(laser => laser.draw());
 
+            // 绘制障碍物和血包
+            obstacles.forEach(o => o.draw());
+            healItems = healItems.filter(item => item.update());
+            healItems.forEach(item => item.draw());
+
             // 绘制粒子效果
             drawParticles();
 
@@ -1292,6 +1367,7 @@
 
             gameOver.style.display = 'block';
             gameState.isPaused = true;
+            slowMotion(); // 游戏结束时慢动作
         }
 
         // 开始游戏
@@ -1333,11 +1409,13 @@
         document.getElementById('soundToggle').addEventListener('click', function() {
             this.classList.toggle('active');
             gameState.settings.sound = this.classList.contains('active');
+            setVolume(gameState.settings.sound ? 1 : 0); // 根据音效开关调整音量
         });
 
         document.getElementById('musicToggle').addEventListener('click', function() {
             this.classList.toggle('active');
             gameState.settings.music = this.classList.contains('active');
+            setVolume(gameState.settings.music ? 1 : 0); // 根据音乐开关调整音量
         });
 
         document.getElementById('difficultySelect').addEventListener('change', function() {
@@ -1351,6 +1429,254 @@
         // 窗口大小调整
         window.addEventListener('resize', resizeCanvas);
 
+        // 初始化
+        resizeCanvas();
+
+        // 输入处理循环
+        setInterval(handleInput, 16);
+
+        // 连击奖励
+        let comboCount = 0;
+        let comboTimer = 0;
+        let comboActive = false;
+        function onComboHit() {
+            comboCount++;
+            comboTimer = 120;
+            if (comboCount >= 3 && !comboActive) {
+                comboActive = true;
+                createDamageText(players[0].x + players[0].width/2, players[0].y - 30, '连击!');
+            }
+        }
+        setInterval(() => {
+            if (comboTimer > 0) comboTimer--;
+            else {
+                comboCount = 0;
+                comboActive = false;
+            }
+        }, 1000/60);
+
+        // 玩家/AI与障碍物/血包碰撞检测
+        function checkCollisions() {
+            // 玩家/AI与障碍物
+            players.forEach(p => {
+                obstacles.forEach(o => {
+                    if (p.x + p.width > o.x && p.x < o.x + o.width && p.y + p.height > o.y && p.y < o.y + o.height) {
+                        // 简单反弹
+                        if (p.x < o.x) p.x = o.x - p.width;
+                        else if (p.x > o.x) p.x = o.x + o.width;
+                    }
+                });
+            });
+            // 玩家/AI与血包
+            players.forEach(p => {
+                healItems.forEach((item, idx) => {
+                    let dx = p.x + p.width/2 - item.x;
+                    let dy = p.y + p.height/2 - item.y;
+                    if (dx*dx + dy*dy < (item.radius+20)*(item.radius+20)) {
+                        p.health = Math.min(p.maxHealth, p.health + 30);
+                        createParticleExplosion(item.x, item.y);
+                        document.getElementById('healSound').play();
+                        healItems.splice(idx, 1);
+                    }
+                });
+            });
+        }
+
+        // 飞镖/激光与障碍物碰撞
+        Dart.prototype.update = function() {
+            this.x += this.direction * this.speed;
+            // 障碍物碰撞
+            for (let o of obstacles) {
+                if (this.x < o.x + o.width && this.x + this.width > o.x && this.y < o.y + o.height && this.y + this.height > o.y) {
+                    return false;
+                }
+            }
+            // 检查碰撞
+            const target = this.owner.isAI ? players[0] : players[1];
+            if (this.checkCollision(target)) {
+                this.owner.dealDamage(target, this.damage);
+                return false;
+            }
+
+            return true;
+        }
+        Laser.prototype.update = function() {
+            this.x += this.direction * this.speed;
+            this.life--;
+            for (let o of obstacles) {
+                if (this.x < o.x + o.width && this.x + this.width > o.x && this.y < o.y + o.height && this.y + this.height > o.y) {
+                    return false;
+                }
+            }
+            // 检查碰撞
+            const target = this.owner.isAI ? players[0] : players[1];
+            if (this.checkCollision(target)) {
+                this.owner.dealDamage(target, GAME_CONFIG.laserDamage);
+                return false;
+            }
+
+            return true;
+        }
+
+        // 飞镖/激光命中音效
+        Player.prototype.dealDamage = function(target, damage) {
+            if (target.ultimateActive && target.ultimatePhase === 1) return;
+            target.health = Math.max(0, target.health - damage);
+            target.hitFlash = 10;
+            createDamageText(target.x + target.width / 2, target.y, damage);
+            createParticleExplosion(target.x + target.width / 2, target.y + target.height / 2);
+            document.getElementById('hitSound').play();
+            if (target.health <= 0) {
+                gameState.gameOver = true;
+                gameState.winner = this.isAI ? 'AI' : '玩家';
+                setTimeout(() => {
+                    document.getElementById('victorySound').play();
+                }, 200);
+                showGameOver();
+            }
+        }
+
+        // AI抢血包、利用障碍物
+        Player.prototype.updateAI = function() {
+            const player = gameState.isRunning ? players[0] : null;
+            if (!player) return;
+
+            this.aiTimer++;
+
+            // 根据难度调整AI行为
+            const difficulty = gameState.settings.difficulty;
+            let reactionTime = 30;
+            let skillChance = 0.1;
+
+            switch (difficulty) {
+                case 'easy':
+                    reactionTime = 60;
+                    skillChance = 0.05;
+                    break;
+                case 'hard':
+                    reactionTime = 15;
+                    skillChance = 0.2;
+                    break;
+            }
+
+            // 距离计算
+            const distance = Math.abs(this.x - player.x);
+            const direction = this.x < player.x ? 1 : -1;
+
+            // AI状态机
+            switch (this.aiState) {
+                case 'idle':
+                    if (this.aiTimer > reactionTime) {
+                        this.aiState = 'approach';
+                        this.aiTimer = 0;
+                    }
+                    break;
+
+                case 'approach':
+                    // 接近玩家
+                    this.velocityX = direction * GAME_CONFIG.playerSpeed;
+                    this.facingRight = direction > 0;
+
+                    // 如果距离合适，切换到攻击状态
+                    if (distance < 150 && distance > 50) {
+                        this.aiState = 'attack';
+                        this.aiTimer = 0;
+                    }
+
+                    // 随机跳跃
+                    if (Math.random() < 0.02 && this.onGround) {
+                        this.jump();
+                    }
+
+                    // 随机使用技能
+                    if (Math.random() < skillChance) {
+                        if (this.dartCooldown === 0 && distance > 80) {
+                            this.shootDart();
+                        } else if (this.teleportCooldown === 0) {
+                            this.teleport();
+                        } else if (this.ultimateCooldown === 0 && distance < 100) {
+                            this.ultimate();
+                        }
+                    }
+                    break;
+
+                case 'attack':
+                    // 攻击行为
+                    if (distance < 50) {
+                        this.attack();
+                    } else if (distance > 200) {
+                        this.aiState = 'approach';
+                    } else {
+                        // 保持距离
+                        if (distance < 80) {
+                            this.velocityX = -direction * GAME_CONFIG.playerSpeed;
+                        } else if (distance > 120) {
+                            this.velocityX = direction * GAME_CONFIG.playerSpeed;
+                        }
+                    }
+
+                    // 随机跳跃躲避
+                    if (Math.random() < 0.03 && this.onGround) {
+                        this.jump();
+                    }
+
+                    this.aiTimer++;
+                    if (this.aiTimer > 120) {
+                        this.aiState = 'idle';
+                        this.aiTimer = 0;
+                    }
+                    break;
+            }
+
+            // 优先抢血包
+            if (healItems.length && this.health < this.maxHealth) {
+                let nearest = healItems.reduce((a, b) => Math.abs(a.x-this.x)<Math.abs(b.x-this.x)?a:b);
+                if (Math.abs(nearest.x - this.x) > 10) {
+                    this.velocityX = nearest.x > this.x ? GAME_CONFIG.playerSpeed : -GAME_CONFIG.playerSpeed;
+                    this.facingRight = nearest.x > this.x;
+                }
+                return;
+            }
+
+            // 躲避飞镖
+            darts.forEach(dart => {
+                if (dart.owner !== this && Math.abs(dart.x - this.x) < 100 && Math.abs(dart.y - this.y) < 50) {
+                    if (this.onGround && Math.random() < 0.1) {
+                        this.jump();
+                    }
+                }
+            });
+        }
+
+        // 音量调节
+        let bgm = document.getElementById('bgm');
+        let hitSound = document.getElementById('hitSound');
+        let healSound = document.getElementById('healSound');
+        let laserSound = document.getElementById('laserSound');
+        let victorySound = document.getElementById('victorySound');
+        function setVolume(vol) {
+            bgm.volume = vol;
+            hitSound.volume = vol;
+            healSound.volume = vol;
+            laserSound.volume = vol;
+            victorySound.volume = vol;
+        }
+
+        // 设置菜单增加音量滑块
+        // 每10秒刷新一个血包
+        setInterval(() => {
+            if (gameState.isRunning && healItems.length < 2) createHealItem();
+        }, 10000);
+
+        // 每局开始生成障碍物
+        // 慢动作实现
+        function slowMotion() {
+            let old = GAME_CONFIG.gravity;
+            GAME_CONFIG.gravity = 0.2;
+            setTimeout(() => { GAME_CONFIG.gravity = old; }, 800);
+        }
+
+        // 在showGameOver调用slowMotion
         // 初始化
         resizeCanvas();
 
