@@ -445,11 +445,11 @@
     </div>
 
     <!-- 音频资源 -->
-    <audio id="bgm" src="https://cdn.pixabay.com/audio/2022/10/16/audio_12b5fae5b7.mp3" loop></audio>
-    <audio id="hitSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b7b7b.mp3"></audio>
-    <audio id="healSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b7b7b.mp3"></audio>
-    <audio id="laserSound" src="https://cdn.pixabay.com/audio/2022/10/16/audio_12b5fae5b7.mp3"></audio>
-    <audio id="victorySound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b7b7b.mp3"></audio>
+    <audio id="bgm" src="audio/audio/火柴人大战.mp3" loop></audio>
+    <audio id="hitSound" src="audio/audio/hit.mp3"></audio>
+    <audio id="healSound" src="audio/audio/gold.mp3"></audio>
+    <audio id="laserSound" src="audio/audio/go.mp3"></audio>
+    <audio id="victorySound" src="audio/audio/win.mp3"></audio>
 
     <script>
         // 游戏配置
@@ -1166,10 +1166,10 @@
             const player1Health = document.querySelector('.player1-health .health-fill');
             const player2Health = document.querySelector('.player2-health .health-fill');
             
-            if (players[0]) {
+            if (players[0] && player1Health) {
                 player1Health.style.width = (players[0].health / players[0].maxHealth * 100) + '%';
             }
-            if (players[1]) {
+            if (players[1] && player2Health) {
                 player2Health.style.width = (players[1].health / players[1].maxHealth * 100) + '%';
             }
 
@@ -1183,9 +1183,9 @@
                 const teleportPercent = Math.max(0, (120 - players[0].teleportCooldown) / 120 * 100);
                 const ultimatePercent = Math.max(0, (GAME_CONFIG.ultimateCooldown - players[0].ultimateCooldown) / GAME_CONFIG.ultimateCooldown * 100);
                 
-                dartCooldown.style.width = dartPercent + '%';
-                teleportCooldown.style.width = teleportPercent + '%';
-                ultimateCooldown.style.width = ultimatePercent + '%';
+                if (dartCooldown) dartCooldown.style.width = dartPercent + '%';
+                if (teleportCooldown) teleportCooldown.style.width = teleportPercent + '%';
+                if (ultimateCooldown) ultimateCooldown.style.width = ultimatePercent + '%';
             }
         }
 
