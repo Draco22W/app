@@ -428,6 +428,8 @@
                     <option value="hard">困难</option>
                 </select>
             </div>
+            <div class="setting-item"><label>玩家颜色</label><input type="color" id="playerColorPicker"></div>
+            <div class="setting-item"><label>AI颜色</label><input type="color" id="aiColorPicker"></div>
             <button class="restart-btn" onclick="restartGame()">重新开始</button>
         </div>
 
@@ -531,7 +533,9 @@
             settings: {
                 sound: true,
                 music: true,
-                difficulty: 'normal'
+                difficulty: 'normal',
+                playerColor: '#ff6b6b', // 新增玩家颜色
+                aiColor: '#3742fa' // 新增AI颜色
             }
         };
 
@@ -739,6 +743,7 @@
                     this.velocityY = -GAME_CONFIG.jumpPower;
                     this.onGround = false;
                     this.isJumping = true;
+                    createJumpDust(this.x + this.width/2, this.y + this.height);
                 }
             }
 
@@ -845,6 +850,7 @@
                     gameState.winner = this.isAI ? 'AI' : '玩家';
                     showGameOver();
                 }
+                if (damage > 20) shakeScreen();
             }
 
             draw() {
@@ -931,12 +937,14 @@
                 this.owner = owner;
                 this.damage = damage;
                 this.speed = GAME_CONFIG.dartSpeed;
-                this.width = 8;
-                this.height = 8;
+                this.width = 18;
+                this.height = 6;
+                this.angle = 0;
             }
 
             update() {
                 this.x += this.direction * this.speed;
+                this.angle += 0.3 * this.direction; // 旋转
 
                 // 检查边界
                 if (this.x < 0 || this.x > GAME_CONFIG.width) {
@@ -969,19 +977,22 @@
 
             draw() {
                 ctx.save();
+                ctx.translate(this.x + this.width/2, this.y + this.height/2);
+                ctx.rotate(this.angle);
+                // 画飞镖主体
+                ctx.fillStyle = '#bbb';
+                ctx.fillRect(-8, -2, 16, 4);
+                // 画飞镖头
+                ctx.beginPath();
+                ctx.moveTo(8, 0);
+                ctx.lineTo(12, -3);
+                ctx.lineTo(12, 3);
+                ctx.closePath();
                 ctx.fillStyle = this.owner.isAI ? '#3742fa' : '#ff6b6b';
-                ctx.beginPath();
-                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 4, 0, Math.PI * 2);
                 ctx.fill();
-                
-                // 飞镖轨迹
-                ctx.strokeStyle = this.owner.isAI ? '#00d2ff' : '#ff4757';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([5, 5]);
-                ctx.beginPath();
-                ctx.moveTo(this.x + this.width / 2, this.y + this.height / 2);
-                ctx.lineTo(this.x + this.width / 2 - this.direction * 20, this.y + this.height / 2);
-                ctx.stroke();
+                // 画尾翼
+                ctx.fillStyle = '#444';
+                ctx.fillRect(-10, -4, 3, 8);
                 ctx.restore();
             }
         }
@@ -1101,12 +1112,26 @@
             }
             draw() {
                 ctx.save();
+                // 画苹果主体
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fillStyle = '#4efc4e';
+                ctx.fillStyle = '#ff3b2f';
                 ctx.shadowColor = '#fff';
                 ctx.shadowBlur = 10;
                 ctx.fill();
+                // 画苹果柄
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y - this.radius + 2);
+                ctx.lineTo(this.x, this.y - this.radius - 8);
+                ctx.strokeStyle = '#8d5524';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                // 画叶子
+                ctx.beginPath();
+                ctx.ellipse(this.x + 7, this.y - this.radius - 4, 6, 3, Math.PI / 6, 0, Math.PI * 2);
+                ctx.fillStyle = '#4efc4e';
+                ctx.fill();
+                // 画+30
                 ctx.font = 'bold 16px Arial';
                 ctx.fillStyle = '#fff';
                 ctx.textAlign = 'center';
@@ -1125,7 +1150,7 @@
                 let h = 30 + Math.random() * 30;
                 let x = 100 + Math.random() * (GAME_CONFIG.width - 200 - w);
                 let y = GAME_CONFIG.groundY - h - Math.random() * 120;
-                let color = `hsl(${Math.random()*360},80%,60%)`;
+                let color = '#e0e0e0'; // 统一为浅灰色
                 obstacles.push(new Obstacle(x, y, w, h, color));
             }
         }
@@ -1140,8 +1165,8 @@
         // 创建玩家
         function createPlayers() {
             players = [
-                new Player(100, GAME_CONFIG.groundY - 60, '#ff6b6b', false),
-                new Player(GAME_CONFIG.width - 130, GAME_CONFIG.groundY - 60, '#3742fa', true)
+                new Player(100, GAME_CONFIG.groundY - 60, gameState.settings.playerColor || '#ff6b6b', false),
+                new Player(GAME_CONFIG.width - 130, GAME_CONFIG.groundY - 60, gameState.settings.aiColor || '#3742fa', true)
             ];
             createObstacles();
             healItems = [];
@@ -1178,9 +1203,10 @@
 
         // 创建瞬移效果
         function createTeleportEffect(x, y) {
-            for (let i = 0; i < 12; i++) {
-                const angle = (Math.PI * 2 * i) / 12;
-                const speed = 2 + Math.random() * 3;
+            for (let i = 0; i < 18; i++) {
+                const angle = (Math.PI * 2 * i) / 18;
+                const speed = 3 + Math.random() * 4;
+                const color = ['#00d2ff','#fff','#ffd700','#ff6b6b'][Math.floor(Math.random()*4)];
                 const particle = {
                     x: x + 15,
                     y: y + 30,
@@ -1188,7 +1214,7 @@
                     velocityY: Math.sin(angle) * speed,
                     life: 20 + Math.random() * 20,
                     maxLife: 40,
-                    color: '#00d2ff'
+                    color: color
                 };
                 particles.push(particle);
             }
@@ -1433,6 +1459,9 @@
             gameState.isPaused = true;
             slowMotion(); // 游戏结束时慢动作
             if (gameState.winner !== '玩家') playSound('failSound');
+            for (let i = 0; i < 5; i++) {
+                createFirework(Math.random()*GAME_CONFIG.width, GAME_CONFIG.groundY-100-Math.random()*200);
+            }
         }
 
         // 开始游戏
@@ -1496,6 +1525,15 @@
             gameState.settings.difficulty = this.value;
         });
 
+        document.getElementById('playerColorPicker').value = gameState.settings.playerColor || '#ff6b6b';
+        document.getElementById('aiColorPicker').value = gameState.settings.aiColor || '#3742fa';
+        document.getElementById('playerColorPicker').addEventListener('input', function() {
+            gameState.settings.playerColor = this.value;
+        });
+        document.getElementById('aiColorPicker').addEventListener('input', function() {
+            gameState.settings.aiColor = this.value;
+        });
+
         // 初始化设置
         document.getElementById('soundToggle').classList.add('active');
         document.getElementById('musicToggle').classList.add('active');
@@ -1520,6 +1558,7 @@
                 comboActive = true;
                 createDamageText(players[0].x + players[0].width/2, players[0].y - 30, '连击!');
                 playSound('comboSound');
+                createComboParticles(players[0].x+players[0].width/2, players[0].y);
             }
         }
         setInterval(() => {
@@ -1620,18 +1659,27 @@
 
             // 根据难度调整AI行为
             const difficulty = gameState.settings.difficulty;
-            let reactionTime = 30;
-            let skillChance = 0.1;
-
+            let reactionTime = 50; // 更慢
+            let skillChance = 0.04; // 更低
             switch (difficulty) {
                 case 'easy':
-                    reactionTime = 60;
-                    skillChance = 0.05;
+                    reactionTime = 80;
+                    skillChance = 0.01;
                     break;
                 case 'hard':
-                    reactionTime = 15;
-                    skillChance = 0.2;
+                    reactionTime = 30;
+                    skillChance = 0.08;
                     break;
+            }
+
+            // AI血量低时偶尔发呆或跳崖
+            if (this.health < this.maxHealth * 0.3 && Math.random() < 0.02) {
+                if (Math.random() < 0.5) {
+                    this.velocityX = 0; // 发呆
+                } else {
+                    this.jump(); // 跳崖
+                }
+                return;
             }
 
             // 距离计算
@@ -1805,12 +1853,11 @@
         
         function playSound(id) {
             const audio = document.getElementById(id);
-            if (audio && id !== 'bgm') { // 不中断背景音乐
+            if (audio && id !== 'bgm') {
                 const now = Date.now();
                 const lastTime = lastPlayTime[id] || 0;
                 const cooldown = soundCooldowns[id] || 100;
-                
-                // 防止音效重复播放
+                if (id === 'hitSound' && !audio.paused) return; // 正在播放不再重叠
                 if (now - lastTime > cooldown) {
                     audio.pause();
                     audio.currentTime = 0;
@@ -1850,6 +1897,151 @@
             // 设置音量
             setVolume(0.7);
             setBGMVolume(0.5);
+        }
+
+        // 跳跃烟尘
+        function createJumpDust(x, y) {
+            for (let i = 0; i < 8; i++) {
+                const angle = Math.PI + (Math.PI * i) / 8;
+                const speed = 2 + Math.random() * 2;
+                const particle = {
+                    x: x,
+                    y: y,
+                    velocityX: Math.cos(angle) * speed,
+                    velocityY: Math.sin(angle) * speed,
+                    life: 12 + Math.random() * 8,
+                    maxLife: 20,
+                    color: '#bbb'
+                };
+                particles.push(particle);
+            }
+        }
+
+        // 游戏结束烟花
+        function createFirework(x, y) {
+            for (let i = 0; i < 30; i++) {
+                const angle = (Math.PI * 2 * i) / 30;
+                const speed = 2 + Math.random() * 4;
+                const color = ['#ff4757','#ffd700','#00d2ff','#4efc4e','#fff'][Math.floor(Math.random()*5)];
+                const particle = {
+                    x: x,
+                    y: y,
+                    velocityX: Math.cos(angle) * speed,
+                    velocityY: Math.sin(angle) * speed,
+                    life: 40 + Math.random() * 30,
+                    maxLife: 60,
+                    color: color
+                };
+                particles.push(particle);
+            }
+        }
+
+        // 被击飞震屏
+        function shakeScreen() {
+            const dx = (Math.random()-0.5)*10;
+            const dy = (Math.random()-0.5)*10;
+            ctx.save();
+            ctx.translate(dx, dy);
+            setTimeout(() => ctx.restore(), 80);
+        }
+
+        // 连击粒子
+        function createComboParticles(x, y) {
+            for (let i = 0; i < 16; i++) {
+                const angle = (Math.PI * 2 * i) / 16;
+                const speed = 2 + Math.random() * 2;
+                const color = ['#ffd700','#ff4757','#00d2ff'][i%3];
+                const particle = {
+                    x: x,
+                    y: y,
+                    velocityX: Math.cos(angle) * speed,
+                    velocityY: Math.sin(angle) * speed,
+                    life: 20 + Math.random() * 10,
+                    maxLife: 30,
+                    color: color
+                };
+                particles.push(particle);
+            }
+        }
+
+        // 胜利跳舞
+        Player.prototype.draw = function() {
+            ctx.save();
+            
+            // 受击闪烁效果
+            if (this.hitFlash > 0) {
+                ctx.globalAlpha = 0.5;
+            }
+
+            // 无敌状态效果
+            if (this.ultimateActive && this.ultimatePhase === 1) {
+                ctx.strokeStyle = '#ffd700';
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.8;
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 25, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+            }
+
+            // 计算动画角度
+            let armAngle = 0;
+            let legAngle = 0;
+
+            // 奔跑动画
+            if (this.isRunning) {
+                armAngle = Math.sin(this.animationFrame * 0.3) * 0.5;
+                legAngle = Math.sin(this.animationFrame * 0.4) * 0.6;
+            }
+
+            // 跳跃动画
+            if (this.isJumping) {
+                legAngle = Math.PI / 6;
+            }
+
+            // 攻击动画
+            if (this.attacking) {
+                armAngle = Math.PI / 4;
+            }
+
+            // 绘制火柴人
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+
+            // 头部
+            ctx.beginPath();
+            ctx.arc(this.x + this.width / 2, this.y + 10, 8, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 身体
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.width / 2, this.y + 18);
+            ctx.lineTo(this.x + this.width / 2, this.y + 45);
+            ctx.stroke();
+
+            // 手臂
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.width / 2, this.y + 25);
+            ctx.lineTo(this.x + this.width / 2 + Math.cos(armAngle) * 15, this.y + 25 + Math.sin(armAngle) * 15);
+            ctx.moveTo(this.x + this.width / 2, this.y + 25);
+            ctx.lineTo(this.x + this.width / 2 - Math.cos(armAngle) * 15, this.y + 25 - Math.sin(armAngle) * 15);
+            ctx.stroke();
+
+            // 腿部
+            ctx.beginPath();
+            ctx.moveTo(this.x + this.width / 2, this.y + 45);
+            ctx.lineTo(this.x + this.width / 2 + Math.cos(legAngle) * 15, this.y + 45 + Math.sin(legAngle) * 15);
+            ctx.moveTo(this.x + this.width / 2, this.y + 45);
+            ctx.lineTo(this.x + this.width / 2 - Math.cos(legAngle) * 15, this.y + 45 - Math.sin(legAngle) * 15);
+            ctx.stroke();
+
+            ctx.restore();
+
+            // 胜利跳舞动画
+            if (gameState.gameOver && gameState.winner === (this.isAI?'AI':'玩家')) {
+                this.y += Math.sin(Date.now()/120)*8;
+            }
         }
     </script>
 </body>
