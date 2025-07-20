@@ -1399,6 +1399,7 @@
             damageTexts = [];
             particles = [];
             
+            playBGM(); // 开始播放背景音乐
             gameLoop();
         }
 
@@ -1425,13 +1426,17 @@
         document.getElementById('soundToggle').addEventListener('click', function() {
             this.classList.toggle('active');
             gameState.settings.sound = this.classList.contains('active');
-            setVolume(gameState.settings.sound ? 1 : 0); // 根据音效开关调整音量
+            setVolume(gameState.settings.sound ? 0.7 : 0); // 音效音量设为0.7，避免太吵
         });
 
         document.getElementById('musicToggle').addEventListener('click', function() {
             this.classList.toggle('active');
             gameState.settings.music = this.classList.contains('active');
-            setVolume(gameState.settings.music ? 1 : 0); // 根据音乐开关调整音量
+            if (gameState.settings.music) {
+                playBGM();
+            } else {
+                stopBGM();
+            }
         });
 
         document.getElementById('difficultySelect').addEventListener('change', function() {
@@ -1441,6 +1446,10 @@
         // 初始化设置
         document.getElementById('soundToggle').classList.add('active');
         document.getElementById('musicToggle').classList.add('active');
+        
+        // 设置初始音量
+        setVolume(0.7); // 音效音量
+        setBGMVolume(0.5); // 背景音乐音量稍低
 
         // 窗口大小调整
         window.addEventListener('resize', resizeCanvas);
@@ -1685,6 +1694,13 @@
             failSound.volume = vol;
         }
 
+        function setBGMVolume(vol) {
+            const bgm = document.getElementById('bgm');
+            if (bgm) {
+                bgm.volume = vol;
+            }
+        }
+
         // 每10秒刷新一个血包
         setInterval(() => {
             if (gameState.isRunning && healItems.length < 2) {
@@ -1717,10 +1733,25 @@
 
         function playSound(id) {
             const audio = document.getElementById(id);
-            if (audio) {
+            if (audio && id !== 'bgm') { // 不中断背景音乐
                 audio.pause();
                 audio.currentTime = 0;
                 audio.play();
+            }
+        }
+
+        function playBGM() {
+            const bgm = document.getElementById('bgm');
+            if (bgm && gameState.settings.music) {
+                bgm.play();
+            }
+        }
+
+        function stopBGM() {
+            const bgm = document.getElementById('bgm');
+            if (bgm) {
+                bgm.pause();
+                bgm.currentTime = 0;
             }
         }
     </script>
