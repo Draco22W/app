@@ -156,10 +156,6 @@
             background: linear-gradient(45deg, #3742fa, #00d2ff);
         }
 
-        .skill-icon.ultimate {
-            background: linear-gradient(45deg, #ffd700, #ff6b35);
-        }
-
         .cooldown-bar {
             width: 60px;
             height: 6px;
@@ -396,7 +392,6 @@
             <p><strong>A/D</strong> - 左右移动</p>
             <p><strong>I</strong> - 飞镖攻击</p>
             <p><strong>O</strong> - 瞬移技能</p>
-            <p><strong>P</strong> - 大招（无敌+激光）</p>
             <p><strong>ESC</strong> - 设置菜单</p>
         </div>
 
@@ -409,12 +404,6 @@
             </div>
             <div class="skill-cooldown">
                 <div class="skill-icon teleport">O</div>
-                <div class="cooldown-bar">
-                    <div class="cooldown-fill" style="width: 100%"></div>
-                </div>
-            </div>
-            <div class="skill-cooldown">
-                <div class="skill-icon ultimate">P</div>
                 <div class="cooldown-bar">
                     <div class="cooldown-fill" style="width: 100%"></div>
                 </div>
@@ -450,7 +439,7 @@
 
         <div class="start-screen" id="startScreen">
             <h1>🔥 火柴人打斗</h1>
-            <p>使用WASD移动，I键飞镖，O键瞬移，P键大招</p>
+            <p>使用WASD移动，I键飞镖，O键瞬移</p>
             <button class="start-btn" onclick="startGame()">开始游戏</button>
         </div>
     </div>
@@ -475,10 +464,7 @@
             dartSpeed: 8,
             dartDamage: 15,
             meleeDamage: 10,
-            teleportDistance: 100,
-            ultimateCooldown: 2400, // 40秒冷却
-            ultimateDuration: 300, // 5秒无敌时间
-            laserDamage: 25
+            teleportDistance: 100
         };
 
         // 游戏状态
@@ -526,10 +512,6 @@
                 this.attackCooldown = 0;
                 this.dartCooldown = 0;
                 this.teleportCooldown = 0;
-                this.ultimateCooldown = 0;
-                this.ultimateActive = false;
-                this.ultimateTimer = 0;
-                this.ultimatePhase = 0; // 0: 未激活, 1: 无敌状态, 2: 激光状态
                 this.animationFrame = 0;
                 this.isRunning = false;
                 this.isJumping = false;
@@ -571,16 +553,6 @@
                 if (this.attackCooldown > 0) this.attackCooldown--;
                 if (this.dartCooldown > 0) this.dartCooldown--;
                 if (this.teleportCooldown > 0) this.teleportCooldown--;
-                if (this.ultimateCooldown > 0) this.ultimateCooldown--;
-
-                // 更新大招状态
-                if (this.ultimateActive) {
-                    this.ultimateTimer--;
-                    if (this.ultimateTimer <= 0) {
-                        this.ultimateActive = false;
-                        this.ultimatePhase = 0;
-                    }
-                }
 
                 // 更新受击闪烁
                 if (this.hitFlash > 0) this.hitFlash--;
@@ -651,8 +623,6 @@
                                 this.shootDart();
                             } else if (this.teleportCooldown === 0) {
                                 this.teleport();
-                            } else if (this.ultimateCooldown === 0 && distance < 100) {
-                                this.ultimate();
                             }
                         }
                         break;
@@ -728,14 +698,11 @@
             shootDart() {
                 if (this.dartCooldown === 0) {
                     const direction = this.facingRight ? 1 : -1;
-                    const damage = this.ultimateActive && this.ultimatePhase === 1 ? 
-                        GAME_CONFIG.dartDamage * 1.5 : GAME_CONFIG.dartDamage;
                     const dart = new Dart(
                         this.x + (this.facingRight ? this.width : 0),
                         this.y + this.height / 2,
                         direction,
-                        this,
-                        damage
+                        this
                     );
                     darts.push(dart);
                     this.dartCooldown = 60; // 1秒冷却
@@ -756,41 +723,7 @@
                 }
             }
 
-            ultimate() {
-                if (this.ultimateCooldown === 0) {
-                    if (this.ultimatePhase === 0) {
-                        // 第一阶段：激活无敌状态
-                        this.ultimateActive = true;
-                        this.ultimatePhase = 1;
-                        this.ultimateTimer = GAME_CONFIG.ultimateDuration;
-                        createUltimateEffect(this.x, this.y);
-                    } else if (this.ultimatePhase === 1) {
-                        // 第二阶段：发射激光
-                        this.ultimatePhase = 2;
-                        this.shootLaser();
-                        this.ultimateActive = false;
-                        this.ultimateCooldown = GAME_CONFIG.ultimateCooldown;
-                    }
-                }
-            }
-
-            shootLaser() {
-                const direction = this.facingRight ? 1 : -1;
-                const laser = new Laser(
-                    this.x + (this.facingRight ? this.width : 0),
-                    this.y + this.height / 2,
-                    direction,
-                    this
-                );
-                lasers.push(laser);
-            }
-
             dealDamage(target, damage) {
-                // 检查无敌状态
-                if (target.ultimateActive && target.ultimatePhase === 1) {
-                    return; // 无敌状态不受伤害
-                }
-
                 target.health = Math.max(0, target.health - damage);
                 target.hitFlash = 10;
                 
@@ -814,17 +747,6 @@
                 // 受击闪烁效果
                 if (this.hitFlash > 0) {
                     ctx.globalAlpha = 0.5;
-                }
-
-                // 无敌状态效果
-                if (this.ultimateActive && this.ultimatePhase === 1) {
-                    ctx.strokeStyle = '#ffd700';
-                    ctx.lineWidth = 2;
-                    ctx.globalAlpha = 0.8;
-                    ctx.beginPath();
-                    ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 25, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.globalAlpha = 1;
                 }
 
                 // 计算动画角度
@@ -885,12 +807,11 @@
 
         // 飞镖类
         class Dart {
-            constructor(x, y, direction, owner, damage = GAME_CONFIG.dartDamage) {
+            constructor(x, y, direction, owner) {
                 this.x = x;
                 this.y = y;
                 this.direction = direction;
                 this.owner = owner;
-                this.damage = damage;
                 this.speed = GAME_CONFIG.dartSpeed;
                 this.width = 8;
                 this.height = 8;
@@ -907,7 +828,7 @@
                 // 检查碰撞
                 const target = this.owner.isAI ? players[0] : players[1];
                 if (this.checkCollision(target)) {
-                    this.owner.dealDamage(target, this.damage);
+                    this.owner.dealDamage(target, GAME_CONFIG.dartDamage);
                     return false;
                 }
 
@@ -947,6 +868,7 @@
             }
         }
 
+<<<<<<< HEAD
         // 激光类
         class Laser {
             constructor(x, y, direction, owner) {
@@ -1028,6 +950,11 @@
         let lasers = [];
         let obstacles = [];
         let healItems = [];
+=======
+        // 游戏对象
+        let players = [];
+        let darts = [];
+>>>>>>> parent of 8f72a24 (Update index.html)
         let damageTexts = [];
         let particles = [];
 
@@ -1133,24 +1060,6 @@
             }
         }
 
-        // 创建大招效果
-        function createUltimateEffect(x, y) {
-            for (let i = 0; i < 20; i++) {
-                const angle = (Math.PI * 2 * i) / 20;
-                const speed = 3 + Math.random() * 4;
-                const particle = {
-                    x: x + 15,
-                    y: y + 30,
-                    velocityX: Math.cos(angle) * speed,
-                    velocityY: Math.sin(angle) * speed,
-                    life: 30 + Math.random() * 30,
-                    maxLife: 60,
-                    color: '#ffd700'
-                };
-                particles.push(particle);
-            }
-        }
-
         // 更新UI
         function updateUI() {
             // 更新血量条
@@ -1167,16 +1076,13 @@
             // 更新技能冷却
             const dartCooldown = document.querySelector('.skill-cooldown:nth-child(1) .cooldown-fill');
             const teleportCooldown = document.querySelector('.skill-cooldown:nth-child(2) .cooldown-fill');
-            const ultimateCooldown = document.querySelector('.skill-cooldown:nth-child(3) .cooldown-fill');
             
             if (players[0]) {
                 const dartPercent = Math.max(0, (60 - players[0].dartCooldown) / 60 * 100);
                 const teleportPercent = Math.max(0, (120 - players[0].teleportCooldown) / 120 * 100);
-                const ultimatePercent = Math.max(0, (GAME_CONFIG.ultimateCooldown - players[0].ultimateCooldown) / GAME_CONFIG.ultimateCooldown * 100);
                 
                 dartCooldown.style.width = dartPercent + '%';
                 teleportCooldown.style.width = teleportPercent + '%';
-                ultimateCooldown.style.width = ultimatePercent + '%';
             }
         }
 
@@ -1261,6 +1167,7 @@
             darts = darts.filter(dart => dart.update());
             darts.forEach(dart => dart.draw());
 
+<<<<<<< HEAD
             // 更新和绘制激光
             lasers = lasers.filter(laser => laser.update());
             lasers.forEach(laser => laser.draw());
@@ -1270,6 +1177,8 @@
             healItems = healItems.filter(item => item.update());
             healItems.forEach(item => item.draw());
 
+=======
+>>>>>>> parent of 8f72a24 (Update index.html)
             // 绘制粒子效果
             drawParticles();
 
@@ -1338,10 +1247,6 @@
             if (keys['o']) {
                 player.teleport();
             }
-
-            if (keys['p']) {
-                player.ultimate();
-            }
         }
 
         // 设置菜单控制
@@ -1379,7 +1284,6 @@
             
             createPlayers();
             darts = [];
-            lasers = [];
             damageTexts = [];
             particles = [];
             
@@ -1398,7 +1302,6 @@
             
             createPlayers();
             darts = [];
-            lasers = [];
             damageTexts = [];
             particles = [];
             
