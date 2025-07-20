@@ -206,3 +206,25 @@ dartDamage = 20; // 增加飞镖伤害
 ## �� 许可证
 
 MIT License 
+
+// 障碍物生成函数
+function createObstacles() {
+    obstacles = [];
+    // 生成3-5个障碍物
+    let count = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < count; i++) {
+        let w = 60 + Math.random() * 60;
+        let h = 30 + Math.random() * 30;
+        let x = 100 + Math.random() * (GAME_CONFIG.width - 200 - w);
+        let y = GAME_CONFIG.groundY - h - Math.random() * 120;
+        let color = `hsl(${Math.random()*360},80%,60%)`;
+        obstacles.push(new Obstacle(x, y, w, h, color));
+    }
+}
+
+// 血包生成函数
+function createHealItem() {
+    let x = 80 + Math.random() * (GAME_CONFIG.width - 160);
+    let y = GAME_CONFIG.groundY - 30 - Math.random() * 100;
+    healItems.push(new HealItem(x, y));
+} 
