@@ -1714,6 +1714,15 @@
 
         // 输入处理循环
         setInterval(handleInput, 16);
+
+        function playSound(id) {
+            const audio = document.getElementById(id);
+            if (audio) {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.play();
+            }
+        }
     </script>
 </body>
 </html> 
