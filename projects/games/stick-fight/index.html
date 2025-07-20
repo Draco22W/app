@@ -449,7 +449,10 @@
     <audio id="hitSound" src="audio/audio/hit.mp3"></audio>
     <audio id="healSound" src="audio/audio/gold.mp3"></audio>
     <audio id="laserSound" src="audio/audio/go.mp3"></audio>
+    <audio id="comboSound" src="audio/audio/gold.mp3"></audio>
+    <audio id="cooldownSound" src="audio/audio/tick.mp3"></audio>
     <audio id="victorySound" src="audio/audio/win.mp3"></audio>
+    <audio id="failSound" src="audio/audio/timeout.mp3"></audio>
 
     <script>
         // 游戏配置
@@ -1380,6 +1383,7 @@
             gameOver.style.display = 'block';
             gameState.isPaused = true;
             slowMotion(); // 游戏结束时慢动作
+            if (gameState.winner !== '玩家') playSound('failSound');
         }
 
         // 开始游戏
@@ -1457,6 +1461,7 @@
             if (comboCount >= 3 && !comboActive) {
                 comboActive = true;
                 createDamageText(players[0].x + players[0].width/2, players[0].y - 30, '连击!');
+                playSound('comboSound');
             }
         }
         setInterval(() => {
@@ -1487,7 +1492,7 @@
                     if (dx*dx + dy*dy < (item.radius+20)*(item.radius+20)) {
                         p.health = Math.min(p.maxHealth, p.health + 30);
                         createParticleExplosion(item.x, item.y);
-                        document.getElementById('healSound').play();
+                        playSound('healSound');
                         healItems.splice(idx, 1);
                     }
                 });
@@ -1537,12 +1542,12 @@
             target.hitFlash = 10;
             createDamageText(target.x + target.width / 2, target.y, damage);
             createParticleExplosion(target.x + target.width / 2, target.y + target.height / 2);
-            document.getElementById('hitSound').play();
+            playSound('hitSound');
             if (target.health <= 0) {
                 gameState.gameOver = true;
                 gameState.winner = this.isAI ? 'AI' : '玩家';
                 setTimeout(() => {
-                    document.getElementById('victorySound').play();
+                    playSound('victorySound');
                 }, 200);
                 showGameOver();
             }
@@ -1666,12 +1671,18 @@
         let healSound = document.getElementById('healSound');
         let laserSound = document.getElementById('laserSound');
         let victorySound = document.getElementById('victorySound');
+        let comboSound = document.getElementById('comboSound');
+        let cooldownSound = document.getElementById('cooldownSound');
+        let failSound = document.getElementById('failSound');
         function setVolume(vol) {
             bgm.volume = vol;
             hitSound.volume = vol;
             healSound.volume = vol;
             laserSound.volume = vol;
             victorySound.volume = vol;
+            comboSound.volume = vol;
+            cooldownSound.volume = vol;
+            failSound.volume = vol;
         }
 
         // 每10秒刷新一个血包
@@ -1680,6 +1691,16 @@
                 createHealItem();
             }
         }, 10000);
+
+        // 技能冷却完毕时
+        function checkSkillCooldowns() {
+            if (players[0]) {
+                if (players[0].dartCooldown === 0) playSound('cooldownSound');
+                if (players[0].teleportCooldown === 0) playSound('cooldownSound');
+                if (players[0].ultimateCooldown === 0) playSound('cooldownSound');
+            }
+        }
+        setInterval(checkSkillCooldowns, 1000/30);
 
         // 慢动作实现
         function slowMotion() {
