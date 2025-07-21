@@ -40,7 +40,7 @@ export default class UIScene extends Phaser.Scene {
         // 显示所有玩家和AI的血条
         const all = (this.gameScene.players || []).concat(this.gameScene.aiPlayers || []);
         all.forEach((p, i) => {
-            if (!p.body) return;
+            if (!p || !p.body) return;
             const x = p.body.position.x;
             const y = p.body.position.y - 40;
             const w = 40;
@@ -53,7 +53,7 @@ export default class UIScene extends Phaser.Scene {
         });
         // 显示主玩家武器和弹药
         const player = this.gameScene.players && this.gameScene.players[0];
-        if (player && player.weapon) {
+        if (player && player.weapon && typeof player.weapon.type !== 'undefined' && typeof player.weapon.ammo !== 'undefined') {
             g.lineStyle(0);
             g.fillStyle(0x222222, 0.8);
             g.fillRect(20, 20, 180, 36);
