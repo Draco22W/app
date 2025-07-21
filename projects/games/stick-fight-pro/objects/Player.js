@@ -1,4 +1,4 @@
-import Phaser from "phaser";
+// 直接用全局 Phaser，无需 import
 
 export default class Player {
     constructor(scene, x, y, color = 0xffffff) {

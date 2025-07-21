@@ -200,6 +200,80 @@ class GameScene extends Phaser.Scene {
         });
     }
 
+    spawnProjectile(type, x, y, angle, owner) {
+        if (type === "pistol") {
+            // 手枪子弹
+            const bullet = this.matter.add.circle(x, y, 6, { isSensor: true });
+            this.matter.body.setVelocity(bullet, { x: Math.cos(angle) * 16, y: Math.sin(angle) * 16 });
+            const g = this.add.graphics();
+            g.fillStyle(0xffff00, 1);
+            g.fillCircle(x, y, 6);
+            let hit = false;
+            const check = () => {
+                if (hit) return;
+                this.players.concat(this.aiPlayers).forEach(target => {
+                    if (target !== owner && Phaser.Math.Distance.Between(target.body.position.x, target.body.position.y, bullet.position.x, bullet.position.y) < 20) {
+                        hit = true;
+                        if (typeof target.takeDamage === "function") target.takeDamage(30);
+                        // 击退
+                        const force = 0.18;
+                        const fx = Math.cos(angle) * force;
+                        const fy = Math.sin(angle) * force;
+                        this.matter.body.applyForce(target.body, { x: fx, y: fy });
+                        // 粒子
+                        if (this.emitHitParticle) this.emitHitParticle(bullet.position.x, bullet.position.y, target.color || 0xffffff);
+                        this.matter.world.remove(bullet);
+                        g.destroy();
+                    }
+                });
+                if (!hit && bullet.position.x > 0 && bullet.position.x < 1280 && bullet.position.y > 0 && bullet.position.y < 720) {
+                    setTimeout(check, 16);
+                } else if (!hit) {
+                    this.matter.world.remove(bullet);
+                    g.destroy();
+                }
+            };
+            check();
+        } else if (type === "rocket") {
+            // 火箭弹
+            const rocket = this.matter.add.circle(x, y, 10, { isSensor: true });
+            this.matter.body.setVelocity(rocket, { x: Math.cos(angle) * 10, y: Math.sin(angle) * 10 });
+            const g = this.add.graphics();
+            g.fillStyle(0xff6600, 1);
+            g.fillCircle(x, y, 10);
+            let hit = false;
+            const check = () => {
+                if (hit) return;
+                this.players.concat(this.aiPlayers).forEach(target => {
+                    if (target !== owner && Phaser.Math.Distance.Between(target.body.position.x, target.body.position.y, rocket.position.x, rocket.position.y) < 30) {
+                        hit = true;
+                        if (typeof target.takeDamage === "function") target.takeDamage(60);
+                        // 爆炸范围击退
+                        this.players.concat(this.aiPlayers).forEach(t2 => {
+                            if (Phaser.Math.Distance.Between(t2.body.position.x, t2.body.position.y, rocket.position.x, rocket.position.y) < 80) {
+                                const force = 0.22;
+                                const fx = (t2.body.position.x - rocket.position.x) / 80 * force;
+                                const fy = (t2.body.position.y - rocket.position.y) / 80 * force;
+                                this.matter.body.applyForce(t2.body, { x: fx, y: fy });
+                            }
+                        });
+                        // 粒子
+                        if (this.emitHitParticle) this.emitHitParticle(rocket.position.x, rocket.position.y, 0xff6600);
+                        this.matter.world.remove(rocket);
+                        g.destroy();
+                    }
+                });
+                if (!hit && rocket.position.x > 0 && rocket.position.x < 1280 && rocket.position.y > 0 && rocket.position.y < 720) {
+                    setTimeout(check, 16);
+                } else if (!hit) {
+                    this.matter.world.remove(rocket);
+                    g.destroy();
+                }
+            };
+            check();
+        }
+    }
+
     emitHitParticle(x, y, color) {
         this.hitEmitter.setPosition(x, y);
         this.hitEmitter.setTint(color);
