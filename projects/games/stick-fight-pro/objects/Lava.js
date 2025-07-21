@@ -14,6 +14,20 @@ export default class Lava extends Phaser.Physics.Matter.Sprite {
     }
 
     update() {
-        // TODO: 岩浆动画、与角色碰撞检测
+        // 检查所有玩家和AI是否碰到岩浆
+        const all = this.scene.players.concat(this.scene.aiPlayers);
+        all.forEach(p => {
+            if (p.dead) return;
+            // 判断角色身体或脚是否在岩浆区域
+            if (Phaser.Math.Distance.Between(p.body.position.x, p.body.position.y, this.x, this.y) < 80) {
+                if (!p._inLava) p._inLava = Date.now();
+                if (Date.now() - p._inLava > 400) {
+                    if (typeof p.takeDamage === "function") p.takeDamage(10);
+                    p._inLava = Date.now();
+                }
+            } else {
+                p._inLava = null;
+            }
+        });
     }
 } 

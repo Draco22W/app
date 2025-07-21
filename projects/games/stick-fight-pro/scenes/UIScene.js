@@ -11,6 +11,27 @@ export default class UIScene extends Phaser.Scene {
     create() {
         this.graphics = this.add.graphics();
         this.gameScene = this.scene.get("GameScene");
+        // 现代化UI：开始游戏按钮
+        this.startPanel = this.add.rectangle(960, 540, 480, 220, 0x222233, 0.95).setDepth(100).setAlpha(0);
+        this.startText = this.add.text(960, 500, "Stick Fight Pro", { fontSize: 48, color: "#fff", fontStyle: "bold" }).setOrigin(0.5).setDepth(101).setAlpha(0);
+        this.startBtn = this.add.rectangle(960, 600, 220, 60, 0x44ccff, 1).setDepth(101).setInteractive().setAlpha(0);
+        this.btnText = this.add.text(960, 600, "开始游戏", { fontSize: 32, color: "#fff" }).setOrigin(0.5).setDepth(102).setAlpha(0);
+        // 动画淡入
+        this.tweens.add({ targets: [this.startPanel, this.startText, this.startBtn, this.btnText], alpha: 1, duration: 800, ease: "Cubic.easeOut" });
+        // 按钮动画
+        this.tweens.add({ targets: this.startBtn, scaleX: 1.1, scaleY: 1.1, yoyo: true, repeat: -1, duration: 800, ease: "Sine.easeInOut" });
+        // 按钮点击事件
+        this.startBtn.on("pointerdown", () => {
+            this.tweens.add({ targets: [this.startPanel, this.startText, this.startBtn, this.btnText], alpha: 0, duration: 400, onComplete: () => {
+                this.startPanel.setVisible(false);
+                this.startText.setVisible(false);
+                this.startBtn.setVisible(false);
+                this.btnText.setVisible(false);
+                this.scene.resume("GameScene");
+            }});
+        });
+        // 初始暂停主场景
+        this.scene.pause("GameScene");
     }
 
     update() {

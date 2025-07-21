@@ -62,9 +62,17 @@ class GameScene extends Phaser.Scene {
     update(time, delta) {
         // 更新玩家
         this.players.forEach(player => player.update(this.input.activePointer));
-        // 更新AI
+        // AI目标选择为最近的活着的其他角色
         this.aiPlayers.forEach(ai => {
-            const target = this.players[0];
+            // 只选活着的目标
+            const candidates = this.players.concat(this.aiPlayers).filter(t => t !== ai && !t.dead);
+            if (candidates.length === 0) return;
+            // 选择最近的目标
+            let minDist = Infinity, target = null;
+            candidates.forEach(t => {
+                const d = Phaser.Math.Distance.Between(ai.body.position.x, ai.body.position.y, t.body.position.x, t.body.position.y);
+                if (d < minDist) { minDist = d; target = t; }
+            });
             if (!target) return;
             ai.setAimTarget(target);
             // AI移动逻辑
@@ -98,11 +106,11 @@ class GameScene extends Phaser.Scene {
     }
 
     createObstacles() {
-        // 示例：生成3个平台障碍物
+        // 放大平台障碍物，适配大地图
         const platforms = [
-            { x: 640, y: 650, w: 1200, h: 40 }, // 地面
-            { x: 400, y: 450, w: 300, h: 30 },
-            { x: 900, y: 350, w: 300, h: 30 }
+            { x: 960, y: 1050, w: 1800, h: 50 }, // 地面
+            { x: 600, y: 700, w: 500, h: 40 },
+            { x: 1400, y: 500, w: 500, h: 40 }
         ];
         platforms.forEach((p, i) => {
             const obs = this.matter.add.rectangle(p.x, p.y, p.w, p.h, { isStatic: true });

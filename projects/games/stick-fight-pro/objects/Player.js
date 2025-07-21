@@ -5,21 +5,21 @@ export default class Player {
         this.scene = scene;
         this.color = color;
         // 头
-        this.head = scene.matter.add.circle(x, y - 32, 12, { restitution: 0.2 });
+        this.head = scene.matter.add.circle(x, y - 32, 8, { restitution: 0.2 });
         // 身体
-        this.body = scene.matter.add.rectangle(x, y, 12, 36, { restitution: 0.2 });
+        this.body = scene.matter.add.rectangle(x, y, 8, 32, { restitution: 0.2 });
         // 左上臂/前臂
-        this.leftUpperArm = scene.matter.add.rectangle(x - 16, y - 8, 18, 6, { restitution: 0.2 });
-        this.leftLowerArm = scene.matter.add.rectangle(x - 32, y - 8, 18, 6, { restitution: 0.2 });
+        this.leftUpperArm = scene.matter.add.rectangle(x - 14, y - 8, 12, 4, { restitution: 0.2 });
+        this.leftLowerArm = scene.matter.add.rectangle(x - 26, y - 8, 12, 4, { restitution: 0.2 });
         // 右上臂/前臂
-        this.rightUpperArm = scene.matter.add.rectangle(x + 16, y - 8, 18, 6, { restitution: 0.2 });
-        this.rightLowerArm = scene.matter.add.rectangle(x + 32, y - 8, 18, 6, { restitution: 0.2 });
+        this.rightUpperArm = scene.matter.add.rectangle(x + 14, y - 8, 12, 4, { restitution: 0.2 });
+        this.rightLowerArm = scene.matter.add.rectangle(x + 26, y - 8, 12, 4, { restitution: 0.2 });
         // 左大腿/小腿
-        this.leftThigh = scene.matter.add.rectangle(x - 8, y + 28, 8, 18, { restitution: 0.2 });
-        this.leftCalf = scene.matter.add.rectangle(x - 8, y + 48, 8, 18, { restitution: 0.2 });
+        this.leftThigh = scene.matter.add.rectangle(x - 6, y + 24, 6, 12, { restitution: 0.2 });
+        this.leftCalf = scene.matter.add.rectangle(x - 6, y + 38, 6, 12, { restitution: 0.2 });
         // 右大腿/小腿
-        this.rightThigh = scene.matter.add.rectangle(x + 8, y + 28, 8, 18, { restitution: 0.2 });
-        this.rightCalf = scene.matter.add.rectangle(x + 8, y + 48, 8, 18, { restitution: 0.2 });
+        this.rightThigh = scene.matter.add.rectangle(x + 6, y + 24, 6, 12, { restitution: 0.2 });
+        this.rightCalf = scene.matter.add.rectangle(x + 6, y + 38, 6, 12, { restitution: 0.2 });
         // 关节约束
         this.constraints = [
             // 头-身体
@@ -44,6 +44,24 @@ export default class Player {
         // 绘制 stickman
         this.graphics = scene.add.graphics();
         this.graphics.setDepth(10);
+        this.isOnGround = false;
+        // 监听碰撞事件
+        scene.matter.world.on("collisionactive", (event) => {
+            event.pairs.forEach(pair => {
+                if ((pair.bodyA === this.body || pair.bodyB === this.body)) {
+                    // 只要有一方是地面/障碍物
+                    if ((pair.bodyA.isStatic && pair.bodyA !== this.body) || (pair.bodyB.isStatic && pair.bodyB !== this.body)) {
+                        // 判断脚部是否接触
+                        if (this.body.position.y < pair.bodyA.position.y || this.body.position.y < pair.bodyB.position.y) {
+                            this.isOnGround = true;
+                        }
+                    }
+                }
+            });
+        });
+        scene.matter.world.on("collisionend", (event) => {
+            this.isOnGround = false;
+        });
     }
 
     setControl(keys) {
@@ -78,8 +96,14 @@ export default class Player {
             } else {
                 this.scene.matter.body.setVelocity(this.body, { x: 0, y: this.body.velocity.y });
             }
-            if (this.controlKeys.up.isDown && Math.abs(this.body.velocity.y) < 1) {
+            // 跳跃（严格判定）
+            if (this.controlKeys.up.isDown && this.isOnGround) {
                 this.scene.matter.body.setVelocity(this.body, { x: this.body.velocity.x, y: -12 });
+            }
+            // F键丢弃武器
+            if (this.controlKeys.switch && Phaser.Input.Keyboard.JustDown(this.controlKeys.switch) && this.weapon) {
+                this.weapon.detach();
+                this.weapon = null;
             }
             // 左键攻击（无论是否有武器）
             if (pointer && pointer.isDown) {
@@ -134,23 +158,23 @@ export default class Player {
         } else if (this.dead) {
             color = 0x888888;
         }
-        g.lineStyle(4, color);
+        g.lineStyle(2, color); // 更细的线条
         // 头
-        g.strokeCircle(this.head.position.x, this.head.position.y, 12);
+        g.strokeCircle(this.head.position.x, this.head.position.y, 8);
         // 身体
-        g.lineBetween(this.head.position.x, this.head.position.y + 12, this.body.position.x, this.body.position.y - 18);
-        g.lineBetween(this.body.position.x, this.body.position.y - 18, this.body.position.x, this.body.position.y + 18);
+        g.lineBetween(this.head.position.x, this.head.position.y + 8, this.body.position.x, this.body.position.y - 16);
+        g.lineBetween(this.body.position.x, this.body.position.y - 16, this.body.position.x, this.body.position.y + 16);
         // 左臂
-        g.lineBetween(this.body.position.x, this.body.position.y - 12, this.leftUpperArm.position.x, this.leftUpperArm.position.y);
+        g.lineBetween(this.body.position.x, this.body.position.y - 10, this.leftUpperArm.position.x, this.leftUpperArm.position.y);
         g.lineBetween(this.leftUpperArm.position.x, this.leftUpperArm.position.y, this.leftLowerArm.position.x, this.leftLowerArm.position.y);
         // 右臂
-        g.lineBetween(this.body.position.x, this.body.position.y - 12, this.rightUpperArm.position.x, this.rightUpperArm.position.y);
+        g.lineBetween(this.body.position.x, this.body.position.y - 10, this.rightUpperArm.position.x, this.rightUpperArm.position.y);
         g.lineBetween(this.rightUpperArm.position.x, this.rightUpperArm.position.y, this.rightLowerArm.position.x, this.rightLowerArm.position.y);
         // 左腿
-        g.lineBetween(this.body.position.x, this.body.position.y + 18, this.leftThigh.position.x, this.leftThigh.position.y);
+        g.lineBetween(this.body.position.x, this.body.position.y + 16, this.leftThigh.position.x, this.leftThigh.position.y);
         g.lineBetween(this.leftThigh.position.x, this.leftThigh.position.y, this.leftCalf.position.x, this.leftCalf.position.y);
         // 右腿
-        g.lineBetween(this.body.position.x, this.body.position.y + 18, this.rightThigh.position.x, this.rightThigh.position.y);
+        g.lineBetween(this.body.position.x, this.body.position.y + 16, this.rightThigh.position.x, this.rightThigh.position.y);
         g.lineBetween(this.rightThigh.position.x, this.rightThigh.position.y, this.rightCalf.position.x, this.rightCalf.position.y);
     }
 
