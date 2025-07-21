@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>火柴人对战（Phaser版）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        body { margin: 0; background: #222; }
+        #game-container { width: 100vw; height: 100vh; overflow: hidden; }
+    </style>
+</head>
+<body>
+<div id="game-container"></div>
+<script>
+/**
+ * 火柴人对战（Phaser.js 3）
+ * - 玩家：WASD 控制，J 攻击
+ * - AI：自动追击玩家
+ * - 双方有血条，击败对方得分
+ * - 简单音效
+ * - 只用一个 index.html 文件
+ * @author AI
+ */
+const GAME_WIDTH = 960;
+const GAME_HEIGHT = 540;
+const PLAYER_SPEED = 220;
+const JUMP_SPEED = 420;
+const ATTACK_RANGE = 48;
+const ATTACK_COOLDOWN = 500;
+const MAX_HP = 5;
+
+let hitSound, jumpSound, winSound;
+
+class Stickman extends Phaser.Physics.Arcade.Sprite {
+    constructor(scene, x, y, color, isPlayer) {
+        super(scene, x, y, null);
+        this.scene = scene;
+        this.isPlayer = isPlayer;
+        this.color = color;
+        this.hp = MAX_HP;
+        this.lastAttack = 0;
+        this.setSize(24, 64);
+        this.setOffset(-12, -32);
+        scene.add.existing(this);
+        scene.physics.add.existing(this);
+        this.setCollideWorldBounds(true);
+        this.body.setGravityY(900);
+        this.facing = 1;
+        this.isAttacking = false;
+        this.attackAnimTime = 0;
+    }
+    preUpdate(time, delta) {
+        super.preUpdate(time, delta);
+        if (this.isAttacking && time > this.attackAnimTime) {
+            this.isAttacking = false;
+        }
+    }
+    attack(time) {
+        if (time - this.lastAttack < ATTACK_COOLDOWN) return false;
+        this.isAttacking = true;
+        this.attackAnimTime = time + 180;
+        this.lastAttack = time;
+        return true;
+    }
+    draw(ctx) {
+        // 身体
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.scale(this.facing, 1);
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 4;
+        // 头
+        ctx.beginPath();
+        ctx.arc(0, -32, 14, 0, Math.PI * 2);
+        ctx.stroke();
+        // 身体
+        ctx.beginPath();
+        ctx.moveTo(0, -18);
+        ctx.lineTo(0, 18);
+        ctx.stroke();
+        // 手
+        ctx.beginPath();
+        ctx.moveTo(0, -8);
+        ctx.lineTo(-16, 8);
+        ctx.moveTo(0, -8);
+        ctx.lineTo(16, 8);
+        ctx.stroke();
+        // 腿
+        ctx.beginPath();
+        ctx.moveTo(0, 18);
+        ctx.lineTo(-12, 38);
+        ctx.moveTo(0, 18);
+        ctx.lineTo(12, 38);
+        ctx.stroke();
+        // 攻击动画
+        if (this.isAttacking) {
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(32, 0);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+}
+
+class MainScene extends Phaser.Scene {
+    constructor() {
+        super({ key: "MainScene" });
+    }
+    preload() {
+        this.load.audio("hit", "https://cdn.jsdelivr.net/gh/Chalarangelo/phaser-sfx/hit.mp3");
+        this.load.audio("jump", "https://cdn.jsdelivr.net/gh/Chalarangelo/phaser-sfx/jump.mp3");
+        this.load.audio("win", "https://cdn.jsdelivr.net/gh/Chalarangelo/phaser-sfx/win.mp3");
+    }
+    create() {
+        // 音效
+        hitSound = this.sound.add("hit");
+        jumpSound = this.sound.add("jump");
+        winSound = this.sound.add("win");
+        // 地面
+        this.ground = this.physics.add.staticGroup();
+        this.ground.create(GAME_WIDTH/2, GAME_HEIGHT-32, null).setDisplaySize(GAME_WIDTH, 64).refreshBody();
+        // 玩家
+        this.player = new Stickman(this, 200, GAME_HEIGHT-100, "#3af", true);
+        // AI
+        this.ai = new Stickman(this, 760, GAME_HEIGHT-100, "#fa3", false);
+        // 碰撞
+        this.physics.add.collider(this.player, this.ground);
+        this.physics.add.collider(this.ai, this.ground);
+        // 分数
+        this.playerScore = 0;
+        this.aiScore = 0;
+        // 输入
+        this.cursors = this.input.keyboard.addKeys({
+            up: "W", left: "A", down: "S", right: "D", attack: "J"
+        });
+        // 摄像机
+        this.cameras.main.setBackgroundColor("#222");
+        // 画布
+        this.customCanvas = document.createElement("canvas");
+        this.customCanvas.width = GAME_WIDTH;
+        this.customCanvas.height = GAME_HEIGHT;
+        this.customCanvas.style.position = "absolute";
+        this.customCanvas.style.left = "0";
+        this.customCanvas.style.top = "0";
+        this.sys.game.canvas.parentNode.appendChild(this.customCanvas);
+        this.ctx = this.customCanvas.getContext("2d");
+        // 禁止右键菜单
+        this.input.mouse.disableContextMenu();
+    }
+    update(time, delta) {
+        // 玩家操作
+        let vx = 0;
+        if (this.cursors.left.isDown) vx -= PLAYER_SPEED;
+        if (this.cursors.right.isDown) vx += PLAYER_SPEED;
+        this.player.setVelocityX(vx);
+        if (this.cursors.up.isDown && this.player.body.onFloor()) {
+            this.player.setVelocityY(-JUMP_SPEED);
+            jumpSound.play();
+        }
+        // 朝向
+        if (vx !== 0) this.player.facing = vx > 0 ? 1 : -1;
+        // 攻击
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.attack)) {
+            if (this.player.attack(time)) {
+                this.checkAttack(this.player, this.ai, time);
+            }
+        }
+        // AI 简单追击
+        let aiVx = 0;
+        if (this.ai.x < this.player.x - 8) aiVx = PLAYER_SPEED * 0.8;
+        else if (this.ai.x > this.player.x + 8) aiVx = -PLAYER_SPEED * 0.8;
+        this.ai.setVelocityX(aiVx);
+        if (this.ai.body.onFloor() && Math.abs(this.ai.x - this.player.x) < 80 && Math.random() < 0.02) {
+            this.ai.setVelocityY(-JUMP_SPEED);
+        }
+        this.ai.facing = aiVx > 0 ? 1 : -1;
+        // AI 攻击
+        if (Math.abs(this.ai.x - this.player.x) < ATTACK_RANGE + 8 && Math.abs(this.ai.y - this.player.y) < 32) {
+            if (time - this.ai.lastAttack > ATTACK_COOLDOWN && Math.random() < 0.08) {
+                if (this.ai.attack(time)) {
+                    this.checkAttack(this.ai, this.player, time);
+                }
+            }
+        }
+        // 死亡检测
+        if (this.player.hp <= 0) {
+            this.aiScore++;
+            winSound.play();
+            this.resetRound();
+        } else if (this.ai.hp <= 0) {
+            this.playerScore++;
+            winSound.play();
+            this.resetRound();
+        }
+        // 画 stickman
+        this.ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        this.drawGround();
+        this.player.draw(this.ctx);
+        this.ai.draw(this.ctx);
+        this.drawUI();
+    }
+    checkAttack(attacker, defender, time) {
+        // 攻击判定
+        let dx = (defender.x - attacker.x) * attacker.facing;
+        let dy = Math.abs(defender.y - attacker.y);
+        if (dx > 0 && dx < ATTACK_RANGE && dy < 32) {
+            defender.hp--;
+            hitSound.play();
+        }
+    }
+    resetRound() {
+        this.player.x = 200;
+        this.player.y = GAME_HEIGHT-100;
+        this.player.hp = MAX_HP;
+        this.ai.x = 760;
+        this.ai.y = GAME_HEIGHT-100;
+        this.ai.hp = MAX_HP;
+    }
+    drawGround() {
+        this.ctx.save();
+        this.ctx.fillStyle = "#444";
+        this.ctx.fillRect(0, GAME_HEIGHT-64, GAME_WIDTH, 64);
+        this.ctx.restore();
+    }
+    drawUI() {
+        // 血条
+        this.ctx.save();
+        // 玩家血条
+        this.ctx.fillStyle = "#3af";
+        this.ctx.fillRect(40, 30, 120 * (this.player.hp / MAX_HP), 18);
+        this.ctx.strokeStyle = "#fff";
+        this.ctx.strokeRect(40, 30, 120, 18);
+        this.ctx.fillStyle = "#fff";
+        this.ctx.fillText("玩家", 40, 25);
+        // AI 血条
+        this.ctx.fillStyle = "#fa3";
+        this.ctx.fillRect(GAME_WIDTH-160, 30, 120 * (this.ai.hp / MAX_HP), 18);
+        this.ctx.strokeStyle = "#fff";
+        this.ctx.strokeRect(GAME_WIDTH-160, 30, 120, 18);
+        this.ctx.fillStyle = "#fff";
+        this.ctx.fillText("AI", GAME_WIDTH-160, 25);
+        // 分数
+        this.ctx.font = "20px monospace";
+        this.ctx.fillStyle = "#fff";
+        this.ctx.fillText(`玩家 ${this.playerScore} : ${this.aiScore} AI`, GAME_WIDTH/2-60, 32);
+        this.ctx.restore();
+    }
+}
+
+const config = {
+    type: Phaser.AUTO,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
+    parent: "game-container",
+    backgroundColor: "#222",
+    physics: {
+        default: "arcade",
+        arcade: {
+            gravity: { y: 900 },
+            debug: false
+        }
+    },
+    scene: [MainScene]
+};
+
+window.onload = () => {
+    new Phaser.Game(config);
+};
+</script>
+</body>
+</html> 
