@@ -10,7 +10,27 @@ export default class Player extends Phaser.Physics.Matter.Sprite {
     constructor(scene, x, y, texture, options = {}) {
         super(scene.matter.world, x, y, texture, undefined, options);
         scene.add.existing(this);
+        // 添加 stickman graphics
+        this.stickmanGraphics = scene.add.graphics();
+        this.stickmanGraphics.setDepth(10);
         // TODO: 初始化肢体物理、关节、状态、武器等
+    }
+
+    drawStickman() {
+        const x = this.x;
+        const y = this.y;
+        this.stickmanGraphics.clear();
+        this.stickmanGraphics.lineStyle(4, 0xffffff);
+        // 头
+        this.stickmanGraphics.strokeCircle(x, y - 20, 12);
+        // 身体
+        this.stickmanGraphics.lineBetween(x, y - 8, x, y + 20);
+        // 手
+        this.stickmanGraphics.lineBetween(x, y + 2, x - 12, y + 12);
+        this.stickmanGraphics.lineBetween(x, y + 2, x + 12, y + 12);
+        // 腿
+        this.stickmanGraphics.lineBetween(x, y + 20, x - 10, y + 32);
+        this.stickmanGraphics.lineBetween(x, y + 20, x + 10, y + 32);
     }
 
     update(cursors, pointer, keys) {
@@ -38,6 +58,8 @@ export default class Player extends Phaser.Physics.Matter.Sprite {
         if (pointer && pointer.isDown) {
             this.attack();
         }
+        // 绘制 stickman
+        this.drawStickman();
     }
 
     takeDamage(amount) {
