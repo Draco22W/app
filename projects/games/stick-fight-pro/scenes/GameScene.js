@@ -57,7 +57,7 @@ class GameScene extends Phaser.Scene {
             alpha: { start: 1, end: 0 },
             lifespan: 300,
             quantity: 8,
-            on: false
+            active: false // 替换 on: false，兼容 Phaser 3.60+
         });
     }
 
