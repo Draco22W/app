@@ -48,16 +48,14 @@ class GameScene extends Phaser.Scene {
         if (this.players.length > 0) {
             this.players[0].setControl(this.keys);
         }
-        // 粒子特效
-        this.particles = this.add.particles(0xffffff);
-        this.hitEmitter = this.particles.createEmitter({
+        // 粒子特效（Phaser 3.60+ 推荐用法）
+        this.particles = this.add.particles(0xffffff, {
             speed: { min: 80, max: 180 },
             angle: { min: 0, max: 360 },
             scale: { start: 0.25, end: 0 },
             alpha: { start: 1, end: 0 },
             lifespan: 300,
-            quantity: 8,
-            active: false // 替换 on: false，兼容 Phaser 3.60+
+            quantity: 8
         });
     }
 
@@ -275,9 +273,9 @@ class GameScene extends Phaser.Scene {
     }
 
     emitHitParticle(x, y, color) {
-        this.hitEmitter.setPosition(x, y);
-        this.hitEmitter.setTint(color);
-        this.hitEmitter.explode(8, x, y);
+        // Phaser 3.60+ 用 emitParticleAt
+        this.particles.setTint(color);
+        this.particles.emitParticleAt(x, y, 8);
     }
 }
 
