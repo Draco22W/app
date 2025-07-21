@@ -42,29 +42,61 @@ class GameScene extends Phaser.Scene {
         this.keys = {
             left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
             right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-            up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-            down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-            switch: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F)
+            up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W)
         };
+        // 绑定主玩家控制
+        if (this.players.length > 0) {
+            this.players[0].setControl(this.keys);
+        }
+        // 粒子特效
+        this.particles = this.add.particles(0xffffff);
+        this.hitEmitter = this.particles.createEmitter({
+            speed: { min: 80, max: 180 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 0.25, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 300,
+            quantity: 8,
+            on: false
+        });
     }
 
     update(time, delta) {
         // 更新玩家
-        this.players.forEach(player => {
-            player.update(this.cursors, this.input.activePointer, this.keys);
-            // 检查与地面武器的碰撞
-            this.weapons.forEach(weapon => {
-                if (!weapon.owner && Phaser.Math.Distance.Between(player.x, player.y, weapon.x, weapon.y) < 40) {
-                    if (Phaser.Input.Keyboard.JustDown(this.keys.switch)) {
-                        player.switchWeapon(weapon);
-                    }
-                }
-            });
-        });
+        this.players.forEach(player => player.update(this.input.activePointer));
         // 更新AI
-        this.aiPlayers.forEach(ai => ai.update());
+        this.aiPlayers.forEach(ai => {
+            const target = this.players[0];
+            if (!target) return;
+            ai.setAimTarget(target);
+            // AI移动逻辑
+            if (ai.body.position.x < target.body.position.x - 10) {
+                this.matter.body.setVelocity(ai.body, { x: 2.5, y: ai.body.velocity.y });
+            } else if (ai.body.position.x > target.body.position.x + 10) {
+                this.matter.body.setVelocity(ai.body, { x: -2.5, y: ai.body.velocity.y });
+            } else {
+                this.matter.body.setVelocity(ai.body, { x: 0, y: ai.body.velocity.y });
+            }
+            if (target.body.position.y < ai.body.position.y - 40 && Math.abs(ai.body.velocity.y) < 1) {
+                this.matter.body.setVelocity(ai.body, { x: ai.body.velocity.x, y: -10 });
+            }
+            ai.update();
+        });
+        // 更新武器
+        this.weapons.forEach(w => w.update());
         // 更新岩浆
         this.lavas.forEach(lava => lava.update());
+        // 玩家/AI拾取地面武器
+        this.players.concat(this.aiPlayers).forEach(p => {
+            if (!p.weapon) {
+                this.weapons.forEach(w => {
+                    if (!w.holder && Phaser.Math.Distance.Between(p.body.position.x, p.body.position.y, w.body.position.x, w.body.position.y) < 40) {
+                        w.attachTo(p.rightLowerArm);
+                        p.setWeapon(w);
+                    }
+                });
+            }
+        });
     }
 
     createObstacles() {
@@ -84,25 +116,26 @@ class GameScene extends Phaser.Scene {
     }
 
     createPlayers() {
-        // 只创建1名玩家，出生点居中
-        const player = new Player(this, 200, 600, null);
+        // 创建主玩家（白色）
+        const player = new Player(this, 200, 600, 0xffffff);
         this.players.push(player);
     }
 
     createAIPlayers() {
-        // 创建最多3名AI，出生点分散
+        // 创建3名AI，红、绿、蓝
+        const aiColors = [0xff4444, 0x44ff44, 0x4488ff];
         for (let i = 0; i < 3; i++) {
-            const ai = new AIPlayer(this, 1000 - i * 100, 600, null);
+            const ai = new Player(this, 1000 - i * 100, 600, aiColors[i]);
             this.aiPlayers.push(ai);
         }
     }
 
     createWeapons() {
-        // 随机生成3个武器，类型随机
+        // 地面生成3把武器，类型随机
         const types = ["knife", "pistol", "rocket"];
         for (let i = 0; i < 3; i++) {
             const type = types[Math.floor(Math.random() * types.length)];
-            const weapon = new Weapon(this, 400 + i * 200, 600, type);
+            const weapon = new Weapon(this, 400 + i * 200, 600, type, 0xffff00 - i * 0x2222);
             this.weapons.push(weapon);
         }
     }
@@ -165,6 +198,12 @@ class GameScene extends Phaser.Scene {
                 }
             });
         });
+    }
+
+    emitHitParticle(x, y, color) {
+        this.hitEmitter.setPosition(x, y);
+        this.hitEmitter.setTint(color);
+        this.hitEmitter.explode(8, x, y);
     }
 }
 

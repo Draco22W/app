@@ -1,23 +1,34 @@
 // scenes/UIScene.js
 // 游戏UI场景，负责血条、武器栏、剩余玩家数、结算界面等
 
-/**
- * @class UIScene
- * @extends Phaser.Scene
- * @description 游戏UI场景，显示和管理所有UI元素
- */
-class UIScene extends Phaser.Scene {
+import Phaser from "phaser";
+
+export default class UIScene extends Phaser.Scene {
     constructor() {
         super({ key: "UIScene" });
     }
 
     create() {
-        // 初始化UI元素（后续补充）
+        this.graphics = this.add.graphics();
+        this.gameScene = this.scene.get("GameScene");
     }
 
     update() {
-        // 动态更新UI（后续补充）
+        const g = this.graphics;
+        g.clear();
+        // 显示所有玩家和AI的血条
+        const all = (this.gameScene.players || []).concat(this.gameScene.aiPlayers || []);
+        all.forEach((p, i) => {
+            if (!p.body) return;
+            const x = p.body.position.x;
+            const y = p.body.position.y - 40;
+            const w = 40;
+            const h = 6;
+            const hp = Math.max(0, Math.min(1, (p.hp || 100) / 100));
+            g.fillStyle(0x000000, 0.7);
+            g.fillRect(x - w / 2, y - h / 2, w, h);
+            g.fillStyle(p.color || 0xffffff, 1);
+            g.fillRect(x - w / 2, y - h / 2, w * hp, h);
+        });
     }
-}
-
-export default UIScene; 
+} 
