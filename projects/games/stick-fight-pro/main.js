@@ -1,12 +1,6 @@
 // main.js
 // Phaser 3 游戏主入口，初始化游戏配置和场景
 
-/**
- * @file main.js
- * @description 初始化 Phaser 游戏实例，挂载到 #game-container
- * @author AI
- */
-
 import GameScene from "./scenes/GameScene.js";
 import UIScene from "./scenes/UIScene.js";
 
