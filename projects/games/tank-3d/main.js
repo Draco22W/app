@@ -14,7 +14,7 @@ let mouse = { x: 0, y: 0 };
 let tankSpeed = 4.5;
 let tankRotateSpeed = 0.04;
 let tankColor = 0x2e8b57;
-let playerName = "玩家1";
+let playerName = "主人";
 // 掩体
 let obstacles = [];
 
@@ -227,7 +227,56 @@ function createAITanks(count = 3, playerSpawn) {
     }
 }
 
-// WASD实现360°无死角移动
+// 记录当前附身AI索引
+let spectateAIIndex = 0;
+let isSpectatingAI = false;
+
+// UI美化
+function beautifyUI() {
+    const playerInfo = document.getElementById('player-info');
+    const aiInfo = document.getElementById('ai-info');
+    if (playerInfo) {
+        playerInfo.style.background = 'rgba(30,34,40,0.85)';
+        playerInfo.style.padding = '8px 18px';
+        playerInfo.style.borderRadius = '12px';
+        playerInfo.style.boxShadow = '0 2px 12px #0006';
+        playerInfo.style.fontWeight = 'bold';
+        playerInfo.style.fontSize = '1.1rem';
+    }
+    if (aiInfo) {
+        aiInfo.style.background = 'rgba(30,34,40,0.85)';
+        aiInfo.style.padding = '8px 18px';
+        aiInfo.style.borderRadius = '12px';
+        aiInfo.style.boxShadow = '0 2px 12px #0006';
+        aiInfo.style.fontWeight = 'bold';
+        aiInfo.style.fontSize = '1.1rem';
+    }
+}
+
+// 鼠标单独控制炮管指向，驾驶视角下机身和视角跟随炮管
+let lastMouseX = null;
+window.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    if (cameraMode === 'follow' && playerTank && playerState.alive) {
+        if (lastMouseX !== null) {
+            // 鼠标左右控制炮管旋转
+            const dx = e.clientX - lastMouseX;
+            playerTank.userData.barrel.rotation.y += dx * 0.01;
+            playerTank.userData.turret.rotation.y += dx * 0.01;
+            // 机身和视角跟随炮管
+            playerTank.rotation.y += dx * 0.01;
+        }
+        lastMouseX = e.clientX;
+    }
+});
+window.addEventListener('mousedown', (e) => {
+    if (e.button === 0) {
+        shootBullet();
+    }
+});
+
+// WASD 360°无死角移动，CapsLock切换A/D为旋转或横移
 function updateTankMovement() {
     if (!playerTank) return;
     if (!playerState.alive) return;
@@ -238,84 +287,50 @@ function updateTankMovement() {
     if (moveState.d) moveVec.x += 1;
     if (moveVec.length() > 0) {
         moveVec.normalize();
-        // 360°无死角移动，机身朝向与移动方向无关
-        playerTank.position.x += moveVec.x * tankSpeed;
-        playerTank.position.z += moveVec.z * tankSpeed;
+        if (cameraMode === 'top') {
+            // 上帝视角：WASD为360°无死角移动，机身方向与移动方向无关
+            playerTank.position.x += moveVec.x * tankSpeed;
+            playerTank.position.z += moveVec.z * tankSpeed;
+        } else if (cameraMode === 'follow') {
+            // 驾驶视角：WASD为360°无死角移动
+            playerTank.position.x += moveVec.x * tankSpeed;
+            playerTank.position.z += moveVec.z * tankSpeed;
+        }
         checkTankObstacleCollision(playerTank);
     }
 }
 
-// 驾驶视角下，鼠标左右控制坦克朝向和炮管
-let followViewYaw = 0;
-window.addEventListener('mousemove', (e) => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-    if (cameraMode === 'follow' && playerTank && playerState.alive) {
-        // 鼠标左右移动控制坦克旋转
-        if (typeof window._lastMouseX !== 'undefined') {
-            const dx = e.clientX - window._lastMouseX;
-            playerTank.rotation.y -= dx * 0.003; // 降低灵敏度
-        }
-        window._lastMouseX = e.clientX;
-    }
-});
-window.addEventListener('mousedown', (e) => {
-    if (e.button === 0) {
-        shootBullet();
-    }
-});
-
-// 高空2D视角下，炮管随鼠标指向地面
 function updateBarrelRotation() {
     if (!playerTank) return;
     if (!renderer || !renderer.domElement) return;
-    if (cameraMode === 'top') {
-        // 屏幕坐标转世界坐标
-        const rect = renderer.domElement.getBoundingClientRect();
-        const mouseNDC = {
-            x: ((mouse.x - rect.left) / rect.width) * 2 - 1,
-            y: -((mouse.y - rect.top) / rect.height) * 2 + 1
-        };
-        // 射线投射到地面
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(mouseNDC, camera);
-        const ground = scene.children.find(obj => obj.geometry instanceof THREE.PlaneGeometry);
-        const intersects = raycaster.intersectObject(ground);
-        if (intersects && intersects[0]) {
-            const point = intersects[0].point;
-            const tankPos = playerTank.position.clone();
-            const dir = new THREE.Vector3(point.x - tankPos.x, 0, point.z - tankPos.z);
-            const angle = Math.atan2(dir.x, dir.z);
-            playerTank.userData.barrel.rotation.y = angle - playerTank.rotation.y;
-            playerTank.userData.turret.rotation.y = angle - playerTank.rotation.y;
-        }
-    } else if (cameraMode === 'follow') {
-        playerTank.userData.barrel.rotation.y = 0;
-        playerTank.userData.turret.rotation.y = 0;
+    // 上帝视角和驾驶视角都支持鼠标指哪炮管指哪
+    const rect = renderer.domElement.getBoundingClientRect();
+    const mouseNDC = {
+        x: ((mouse.x - rect.left) / rect.width) * 2 - 1,
+        y: -((mouse.y - rect.top) / rect.height) * 2 + 1
+    };
+    // 射线投射到地面
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouseNDC, camera);
+    const ground = scene.children.find(obj => obj.geometry instanceof THREE.PlaneGeometry);
+    const intersects = raycaster.intersectObject(ground);
+    if (intersects && intersects[0]) {
+        const point = intersects[0].point;
+        const tankPos = playerTank.position.clone();
+        const dir = new THREE.Vector3(point.x - tankPos.x, 0, point.z - tankPos.z);
+        const angle = Math.atan2(dir.x, dir.z);
+        playerTank.userData.barrel.rotation.y = angle - playerTank.rotation.y;
+        playerTank.userData.turret.rotation.y = angle - playerTank.rotation.y;
     }
 }
 
-function updatePlayerInfoUI() {
-    const playerInfo = document.getElementById('player-info');
-    playerInfo.textContent = `玩家：${playerName}  ${playerState.alive ? '存活' : '死亡'}  被击中：${playerState.hits}`;
-}
-function updateAIInfoUI() {
-    const aiInfo = document.getElementById('ai-info');
-    let html = '';
-    for (let i = 0; i < aiTanks.length; i++) {
-        const state = aiStates[i];
-        html += `${aiTanks[i].userData.name}：${state.alive ? '存活' : '死亡'} `;
-    }
-    aiInfo.textContent = html;
-}
-
-// 修正子弹发射方向，保证水平发射
+// 子弹严格从炮管方向发射
 function shootBullet(shooter = playerTank) {
     if (!shooter || !shooter.userData || shooter.userData.alive === false) return;
     const barrel = shooter.userData.barrel;
     const worldPos = new THREE.Vector3();
     barrel.getWorldPosition(worldPos);
-    // 获取炮管世界方向，只取XZ分量
+    // 获取炮管世界方向
     let dir = new THREE.Vector3(0, 0, 1);
     dir.applyQuaternion(barrel.getWorldQuaternion(new THREE.Quaternion()));
     dir.y = 0; // 保证水平
@@ -531,24 +546,38 @@ function checkWin() {
     }
 }
 
-// AI瞄准增加误差，降低难度
+// AI自动攻击最近目标且难度降低
 function updateAITanks() {
     for (let i = 0; i < aiTanks.length; i++) {
         const ai = aiTanks[i];
         if (!ai || !ai.userData || ai.userData.alive === false) continue;
-        const toPlayer = playerTank.position.clone().sub(ai.position);
-        toPlayer.y = 0;
-        let dist = toPlayer.length();
+        // 选择最近目标
+        let targets = [playerTank].concat(aiTanks.filter((a, idx) => idx !== i && a.userData.alive));
+        let minDist = Infinity;
+        let target = null;
+        for (const t of targets) {
+            if (!t || !t.userData || t.userData.alive === false) continue;
+            const d = ai.position.distanceTo(t.position);
+            if (d < minDist) {
+                minDist = d;
+                target = t;
+            }
+        }
+        if (!target) continue;
+        // 移动到目标
+        const toTarget = target.position.clone().sub(ai.position);
+        toTarget.y = 0;
+        let dist = toTarget.length();
         if (dist > 60) {
-            toPlayer.normalize();
+            toTarget.normalize();
             let speed = 1.2 + Math.random() * 0.3;
             if (dist < 120) speed = 0.3 + Math.random() * 0.2;
-            ai.position.add(toPlayer.multiplyScalar(speed));
+            ai.position.add(toTarget.multiplyScalar(speed));
         }
         checkTankObstacleCollision(ai);
-        // AI瞄准增加误差
-        let aimTarget = playerTank.position.clone();
-        const aimError = 60 + Math.random() * 120; // 误差范围
+        // AI瞄准增加更大误差
+        let aimTarget = target.position.clone();
+        const aimError = 120 + Math.random() * 180; // 误差更大
         aimTarget.x += (Math.random() - 0.5) * aimError;
         aimTarget.z += (Math.random() - 0.5) * aimError;
         const dir = new THREE.Vector3(aimTarget.x - ai.position.x, 0, aimTarget.z - ai.position.z);
@@ -687,13 +716,13 @@ function initThree() {
         aiStates.push({ hits: 0, alive: true });
         aiTimers.push(0);
     }
+    beautifyUI();
 }
 
 function animate() {
     if (isPaused) return;
     window.animationId = requestAnimationFrame(animate);
     updateTankMovement();
-    updateBarrelRotation();
     updateBullets();
     updateAITanks();
     checkBulletTankCollision();
@@ -750,4 +779,40 @@ window.addEventListener('DOMContentLoaded', () => {
         if (e.key === 's') moveState.s = false;
         if (e.key === 'd') moveState.d = false;
     });
-}); 
+    // 死亡后自由视角与AI附身切换（简化版）
+    window.addEventListener('keydown', (e) => {
+        if (!playerState.alive) {
+            if (e.key === 'ArrowLeft') camera.rotation.y += 0.1;
+            if (e.key === 'ArrowRight') camera.rotation.y -= 0.1;
+            if (e.key === 'ArrowUp') camera.position.z -= 20;
+            if (e.key === 'ArrowDown') camera.position.z += 20;
+            if (e.key === 'c' || e.key === 'C') {
+                if (aiTanks.length > 0) {
+                    spectateAIIndex = (spectateAIIndex + 1) % aiTanks.length;
+                    isSpectatingAI = true;
+                }
+            }
+            if (e.key === 'v' || e.key === 'V') {
+                // 预留：可切换控制AI
+            }
+        }
+    });
+});
+
+function updatePlayerInfoUI() {
+    const playerInfo = document.getElementById('player-info');
+    if (playerInfo) {
+        playerInfo.textContent = `玩家：${playerName}  ${playerState.alive ? '存活' : '死亡'}  被击中：${playerState.hits}`;
+    }
+}
+function updateAIInfoUI() {
+    const aiInfo = document.getElementById('ai-info');
+    if (aiInfo) {
+        let html = '';
+        for (let i = 0; i < aiTanks.length; i++) {
+            const state = aiStates[i];
+            html += `${aiTanks[i].userData.name}：${state && state.alive ? '存活' : '死亡'} `;
+        }
+        aiInfo.textContent = html;
+    }
+} 
