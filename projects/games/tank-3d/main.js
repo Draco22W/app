@@ -15,6 +15,10 @@ let tankSpeed = 2.2;
 let tankRotateSpeed = 0.04;
 let tankColor = 0x2e8b57;
 let playerName = "玩家1";
+// 掩体
+let obstacles = [];
+
+// 子弹
 let bullets = [];
 const BULLET_SPEED = 12;
 const BULLET_RADIUS = 8;
@@ -45,22 +49,21 @@ window.addEventListener('keydown', (e) => {
 });
 
 // 随机生成掩体
-function createObstacles(count = 18) {
+function createObstacles(count = 12) {
     obstacles = [];
-    const minDist = 180; // 出生点保护半径
     for (let i = 0; i < count; i++) {
-        let x, z, safe = false;
-        while (!safe) {
-            x = Math.random() * 1000 - 500;
-            z = Math.random() * 1000 - 500;
-            // 距离出生点远一些
-            safe = Math.abs(x) > minDist || Math.abs(z) > minDist;
+        let x = Math.random() * 1000 - 500;
+        let z = Math.random() * 1000 - 500;
+        // 避开中心区域
+        if (Math.abs(x) < 150 && Math.abs(z) < 150) {
+            x += 200 * Math.sign(x || 1);
+            z += 200 * Math.sign(z || 1);
         }
-        const w = 60 + Math.random() * 60;
+        const w = 60 + Math.random() * 40;
         const h = 60 + Math.random() * 40;
-        const d = 60 + Math.random() * 60;
+        const d = 60 + Math.random() * 40;
         const geo = new THREE.BoxGeometry(w, h, d);
-        const mat = new THREE.MeshPhongMaterial({ color: 0x5a5a5a, shininess: 10 });
+        const mat = new THREE.MeshPhongMaterial({ color: 0x5a5a5a });
         const box = new THREE.Mesh(geo, mat);
         box.position.set(x, h / 2, z);
         box.castShadow = true;
@@ -194,7 +197,7 @@ window.addEventListener('mousemove', (e) => {
         // 鼠标左右移动控制坦克旋转
         if (typeof window._lastMouseX !== 'undefined') {
             const dx = e.clientX - window._lastMouseX;
-            playerTank.rotation.y -= dx * 0.008;
+            playerTank.rotation.y -= dx * 0.003; // 降低灵敏度
         }
         window._lastMouseX = e.clientX;
     }
@@ -251,7 +254,7 @@ function updateAIInfoUI() {
 }
 
 function shootBullet(shooter = playerTank) {
-    if (!shooter || !shooter.userData.alive) return;
+    if (!shooter || !shooter.userData || shooter.userData.alive === false) return;
     // 驾驶视角下，玩家死亡也不能射击
     if (shooter === playerTank && !playerState.alive) return;
     // 炮管世界方向
@@ -336,7 +339,7 @@ function updateBullets() {
 function checkBulletTankCollision() {
     // 玩家被AI子弹击中
     for (const ai of aiTanks) {
-        if (!ai.userData.alive) continue;
+        if (!ai || !ai.userData || ai.userData.alive === false) continue;
         for (const bullet of bullets) {
             if (bullet.userData.shooter === ai) continue; // AI自己发的子弹不打自己
             if (bullet.userData.shooter === playerTank) continue; // 跳过玩家子弹
@@ -452,8 +455,7 @@ function updateAITanks() {
     const cfg = AI_CONFIG[aiDifficulty] || AI_CONFIG.normal;
     for (let i = 0; i < aiTanks.length; i++) {
         const ai = aiTanks[i];
-        const state = aiStates[i];
-        if (!state.alive) continue;
+        if (!ai || !ai.userData || ai.userData.alive === false) continue;
         // 1. 躲避子弹
         if (cfg.dodge) {
             for (const bullet of bullets) {
@@ -511,6 +513,16 @@ function getPlayerVelocity() {
     const vel = playerTank.position.clone().sub(lastPlayerPos);
     lastPlayerPos.copy(playerTank.position);
     return vel;
+}
+
+function createAITank(color = 0x1976d2, name = "AI") {
+    const tank = createTank(color);
+    tank.position.set(Math.random() * 800 - 400, 9, Math.random() * 800 - 400);
+    tank.userData.name = name;
+    tank.userData.isAI = true;
+    tank.userData.alive = true;
+    scene.add(tank);
+    return tank;
 }
 
 function initThree() {
@@ -571,6 +583,9 @@ function initThree() {
     if (renderer) renderer.setSize(window.innerWidth, window.innerHeight);
     console.log('camera position', camera.position);
     console.log('scene children', scene.children.map(obj => obj.type));
+    createObstacles(12);
+    aiTanks = [createAITank(0x1976d2, "AI1")];
+    aiShootTimers = [0];
 }
 
 function animate() {
