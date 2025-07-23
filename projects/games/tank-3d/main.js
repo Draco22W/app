@@ -120,8 +120,8 @@ function updateCamera() {
     }
 }
 
-// 优化出生点距离，所有坦克距离大于400
-function getSafeSpawn(existing, minDist = 400) {
+// 生成安全出生点，确保距离足够远
+function getSafeSpawn(existing, minDist = 300) {
     let x, z, safe = false, tryCount = 0;
     while (!safe && tryCount < 100) {
         x = Math.random() * 900 - 450;
@@ -253,23 +253,17 @@ function updateAIInfoUI() {
     aiInfo.textContent = html;
 }
 
+// 修正子弹发射方向，保证水平发射
 function shootBullet(shooter = playerTank) {
     if (!shooter || !shooter.userData || shooter.userData.alive === false) return;
-    // 驾驶视角下，玩家死亡也不能射击
-    if (shooter === playerTank && !playerState.alive) return;
-    // 炮管世界方向
     const barrel = shooter.userData.barrel;
     const worldPos = new THREE.Vector3();
     barrel.getWorldPosition(worldPos);
-    // 炮管朝向
+    // 获取炮管世界方向，只取XZ分量
     let dir = new THREE.Vector3(0, 0, 1);
     dir.applyQuaternion(barrel.getWorldQuaternion(new THREE.Quaternion()));
+    dir.y = 0; // 保证水平
     dir.normalize();
-    // 驾驶视角下，炮管方向与坦克一致
-    if (shooter === playerTank && cameraMode === 'follow') {
-        dir = new THREE.Vector3(Math.sin(playerTank.rotation.y), 0, Math.cos(playerTank.rotation.y));
-    }
-    // 子弹初始位置在炮管前端
     const bulletGeo = new THREE.SphereGeometry(BULLET_RADIUS, 16, 16);
     const bulletMat = new THREE.MeshPhongMaterial({ color: 0xf5e663 });
     const bullet = new THREE.Mesh(bulletGeo, bulletMat);
@@ -278,7 +272,6 @@ function shootBullet(shooter = playerTank) {
     bullet.userData = {
         velocity: dir.clone().multiplyScalar(BULLET_SPEED),
         born: performance.now(),
-        lastBounce: 0,
         shooter
     };
     scene.add(bullet);
@@ -450,56 +443,34 @@ function fadeOutTank(tank) {
     fade();
 }
 
+// 修正AI移动逻辑，让AI持续主动追击玩家
 function updateAITanks() {
-    if (!playerTank || !playerState.alive) return;
-    const cfg = AI_CONFIG[aiDifficulty] || AI_CONFIG.normal;
     for (let i = 0; i < aiTanks.length; i++) {
         const ai = aiTanks[i];
         if (!ai || !ai.userData || ai.userData.alive === false) continue;
-        // 1. 躲避子弹
-        if (cfg.dodge) {
-            for (const bullet of bullets) {
-                if (bullet.userData.shooter === ai) continue;
-                // 预测子弹到达AI的时间
-                const rel = ai.position.clone().sub(bullet.position);
-                const v = bullet.userData.velocity.clone();
-                const t = rel.length() / (v.length() + 1e-6);
-                // 只考虑2秒内会击中的子弹
-                if (t < 2.0) {
-                    // 判断子弹方向是否指向AI
-                    const dir = v.clone().normalize();
-                    const toAI = rel.clone().normalize();
-                    if (dir.dot(toAI) > 0.95) {
-                        // 横向闪避
-                        const side = new THREE.Vector3(-dir.z, 0, dir.x);
-                        ai.position.add(side.multiplyScalar(2.5 + Math.random() * 2));
-                        break;
-                    }
-                }
-            }
-        }
-        // 2. 主动靠近玩家
+        // 持续追玩家，加最小速度和噪声
         const toPlayer = playerTank.position.clone().sub(ai.position);
-        if (toPlayer.length() > 180) {
-            toPlayer.y = 0;
+        toPlayer.y = 0;
+        let dist = toPlayer.length();
+        if (dist > 60) {
             toPlayer.normalize();
-            ai.position.add(toPlayer.multiplyScalar(1.2 + Math.random()));
+            // AI即使距离很近也会缓慢移动，避免完全停下
+            let speed = 1.2 + Math.random() * 0.3;
+            if (dist < 120) speed = 0.3 + Math.random() * 0.2;
+            ai.position.add(toPlayer.multiplyScalar(speed));
         }
-        // 3. 炮管朝向玩家（带预判）
-        const playerVel = getPlayerVelocity();
-        const lead = playerVel.clone().multiplyScalar(cfg.aimLead * 10);
-        const aimTarget = playerTank.position.clone().add(lead);
-        const dir = new THREE.Vector3(aimTarget.x - ai.position.x, 0, aimTarget.z - ai.position.z);
+        // 炮管朝向玩家
+        const dir = new THREE.Vector3(playerTank.position.x - ai.position.x, 0, playerTank.position.z - ai.position.z);
         const angle = Math.atan2(dir.x, dir.z);
         ai.rotation.y = angle;
         ai.userData.barrel.rotation.y = 0;
         ai.userData.turret.rotation.y = 0;
-        // 4. 定时射击
-        if (!aiTimers[i]) aiTimers[i] = 0;
-        aiTimers[i] += 16;
-        if (aiTimers[i] > cfg.shootInterval) {
+        // 定时射击
+        if (!aiShootTimers[i]) aiShootTimers[i] = 0;
+        aiShootTimers[i] += 16;
+        if (aiShootTimers[i] > 1200) {
             shootBullet(ai);
-            aiTimers[i] = 0;
+            aiShootTimers[i] = 0;
         }
     }
 }
@@ -567,8 +538,11 @@ function initThree() {
     border.position.y = 10;
     scene.add(border);
     // 玩家坦克
+    let spawns = [];
+    const playerSpawn = getSafeSpawn(spawns, 350);
+    spawns.push(playerSpawn);
     playerTank = createTank(tankColor);
-    playerTank.position.set(0, 9, 0);
+    playerTank.position.set(playerSpawn.x, 9, playerSpawn.z);
     playerTank.rotation.y = 0;
     scene.add(playerTank);
     // 光照
@@ -584,8 +558,17 @@ function initThree() {
     console.log('camera position', camera.position);
     console.log('scene children', scene.children.map(obj => obj.type));
     createObstacles(12);
-    aiTanks = [createAITank(0x1976d2, "AI1")];
-    aiShootTimers = [0];
+    // 生成玩家和AI出生点
+    aiTanks = [];
+    aiShootTimers = [];
+    for (let i = 0; i < 1; i++) { // 你可调整AI数量
+        const aiSpawn = getSafeSpawn(spawns, 350);
+        spawns.push(aiSpawn);
+        const ai = createAITank(0x1976d2, `AI${i+1}`);
+        ai.position.set(aiSpawn.x, 9, aiSpawn.z);
+        aiTanks.push(ai);
+        aiShootTimers.push(0);
+    }
 }
 
 function animate() {
