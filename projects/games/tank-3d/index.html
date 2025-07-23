@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D坦克大战</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+</head>
+<body>
+    <div id="ui-panel">
+        <h2>3D坦克大战 设置</h2>
+        <label>玩家昵称：<input type="text" id="playerName" value="玩家1"></label>
+        <label>AI数量：
+            <select id="aiCount">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+            </select>
+        </label>
+        <label>AI难度：
+            <select id="aiDifficulty">
+                <option value="easy">简单</option>
+                <option value="normal" selected>正常</option>
+                <option value="hard">困难</option>
+            </select>
+        </label>
+        <label>坦克颜色：<input type="color" id="tankColor" value="#2e8b57"></label>
+        <button id="startBtn">开始游戏</button>
+    </div>
+    <div id="game-info">
+        <div id="player-info"></div>
+        <div id="ai-info"></div>
+    </div>
+    <script src="main.js"></script>
+</body>
+</html> 
