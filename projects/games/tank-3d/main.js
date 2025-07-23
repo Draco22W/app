@@ -22,7 +22,8 @@ let obstacles = [];
 let bullets = [];
 const BULLET_SPEED = 12;
 const BULLET_RADIUS = 8;
-const BULLET_LIFETIME = 5000; // ms
+// 子弹反弹时间3秒
+const BULLET_LIFETIME = 3000; // ms
 
 let aiTanks = [];
 let aiStates = [];
@@ -45,6 +46,72 @@ let cameraMode = 'top'; // 'top'高空2D, 'follow'驾驶
 window.addEventListener('keydown', (e) => {
     if (e.key === 'c' || e.key === 'C') {
         cameraMode = cameraMode === 'top' ? 'follow' : 'top';
+    }
+});
+
+// 暂停与弹窗
+let isPaused = false;
+function showPauseDialog() {
+    let dialog = document.getElementById('pause-dialog');
+    if (!dialog) {
+        dialog = document.createElement('div');
+        dialog.id = 'pause-dialog';
+        dialog.style.position = 'fixed';
+        dialog.style.top = '50%';
+        dialog.style.left = '50%';
+        dialog.style.transform = 'translate(-50%, -50%)';
+        dialog.style.background = 'rgba(30,34,40,0.98)';
+        dialog.style.color = '#fff';
+        dialog.style.padding = '32px 48px';
+        dialog.style.borderRadius = '16px';
+        dialog.style.zIndex = '1000';
+        dialog.style.textAlign = 'center';
+        dialog.innerHTML = `<h2>游戏已暂停</h2><button id="resumeBtn">继续</button> <button id="resetBtn">重置</button>`;
+        document.body.appendChild(dialog);
+        document.getElementById('resumeBtn').onclick = () => {
+            dialog.remove();
+            isPaused = false;
+            animate();
+        };
+        document.getElementById('resetBtn').onclick = () => {
+            dialog.remove();
+            isPaused = false;
+            initThree();
+            animate();
+        };
+    }
+}
+function showWinDialog(winner) {
+    let dialog = document.getElementById('win-dialog');
+    if (!dialog) {
+        dialog = document.createElement('div');
+        dialog.id = 'win-dialog';
+        dialog.style.position = 'fixed';
+        dialog.style.top = '50%';
+        dialog.style.left = '50%';
+        dialog.style.transform = 'translate(-50%, -50%)';
+        dialog.style.background = 'rgba(30,34,40,0.98)';
+        dialog.style.color = '#fff';
+        dialog.style.padding = '32px 48px';
+        dialog.style.borderRadius = '16px';
+        dialog.style.zIndex = '1000';
+        dialog.style.textAlign = 'center';
+        dialog.innerHTML = `<h2>${winner} 获胜！</h2><button id="resetBtn2">重置</button>`;
+        document.body.appendChild(dialog);
+        document.getElementById('resetBtn2').onclick = () => {
+            dialog.remove();
+            isPaused = false;
+            initThree();
+            animate();
+        };
+    }
+}
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (!isPaused) {
+            isPaused = true;
+            showPauseDialog();
+        }
     }
 });
 
@@ -103,19 +170,20 @@ function createTank(color = 0x2e8b57) {
     return tank;
 }
 
+// 俯视视角（2D效果）
 function updateCamera() {
     if (!renderer || !renderer.domElement) return;
-    if (cameraMode === 'top') {
-        // 高空2D视角
-        camera.position.set(0, 120, 220);
-        camera.lookAt(0, 0, 0);
+    if (cameraMode === 'top' && playerTank) {
+        // 2D正上方视角
+        camera.position.set(playerTank.position.x, 500, playerTank.position.z);
+        camera.up.set(0, 0, -1); // 保证2D效果
+        camera.lookAt(playerTank.position.x, 0, playerTank.position.z);
     } else if (cameraMode === 'follow' && playerTank && playerState.alive) {
-        // 驾驶视角，摄像机跟随坦克
         const tankPos = playerTank.position.clone();
         const tankRot = playerTank.rotation.y;
-        // 摄像机在坦克上方偏后
         const camOffset = new THREE.Vector3(0, 38, -60).applyAxisAngle(new THREE.Vector3(0,1,0), tankRot);
         camera.position.copy(tankPos.clone().add(camOffset));
+        camera.up.set(0, 1, 0);
         camera.lookAt(tankPos.x, tankPos.y + 12, tankPos.z);
     }
 }
@@ -154,6 +222,7 @@ function createAITanks(count = 3, playerSpawn) {
     }
 }
 
+// 修改updateTankMovement和updateAITanks，增加障碍物碰撞检测
 function updateTankMovement() {
     if (!playerTank) return;
     if (!playerState.alive) return;
@@ -165,13 +234,11 @@ function updateTankMovement() {
     if (moveVec.length() > 0) {
         moveVec.normalize();
         if (cameraMode === 'top') {
-            // 2D高空视角，旋转方向与移动方向一致
             const angle = Math.atan2(moveVec.x, moveVec.z);
             playerTank.rotation.y = angle;
             playerTank.position.x += Math.sin(angle) * tankSpeed;
             playerTank.position.z += Math.cos(angle) * tankSpeed;
         } else if (cameraMode === 'follow') {
-            // 驾驶视角，坦克朝向决定前进方向
             const angle = playerTank.rotation.y;
             const forward = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
             const right = new THREE.Vector3(Math.cos(angle), 0, -Math.sin(angle));
@@ -185,6 +252,7 @@ function updateTankMovement() {
                 playerTank.position.add(move.multiplyScalar(tankSpeed));
             }
         }
+        checkTankObstacleCollision(playerTank);
     }
 }
 
@@ -443,6 +511,35 @@ function fadeOutTank(tank) {
     fade();
 }
 
+// 障碍物碰撞检测，坦克无法穿过
+function checkTankObstacleCollision(tank) {
+    const tankPos = tank.position.clone();
+    for (const obs of obstacles) {
+        const obsBox = new THREE.Box3().setFromObject(obs);
+        const tankBox = new THREE.Box3().setFromCenterAndSize(
+            tankPos,
+            new THREE.Vector3(48, 18, 60)
+        );
+        if (obsBox.intersectsBox(tankBox)) {
+            // 简单反弹：把坦克推回去
+            const obsCenter = new THREE.Vector3();
+            obsBox.getCenter(obsCenter);
+            const away = tankPos.clone().sub(obsCenter).setY(0).normalize();
+            tank.position.add(away.multiplyScalar(8));
+        }
+    }
+}
+
+// 游戏胜利判定
+function checkWin() {
+    let aliveTanks = [playerTank].concat(aiTanks).filter(t => t && t.userData && t.userData.alive !== false);
+    if (aliveTanks.length === 1) {
+        let winner = aliveTanks[0] === playerTank ? playerName : (aliveTanks[0].userData.name || 'AI');
+        isPaused = true;
+        showWinDialog(winner);
+    }
+}
+
 // 修正AI移动逻辑，让AI持续主动追击玩家
 function updateAITanks() {
     for (let i = 0; i < aiTanks.length; i++) {
@@ -472,6 +569,7 @@ function updateAITanks() {
             shootBullet(ai);
             aiShootTimers[i] = 0;
         }
+        checkTankObstacleCollision(ai);
     }
 }
 
@@ -572,15 +670,15 @@ function initThree() {
 }
 
 function animate() {
+    if (isPaused) return;
     window.animationId = requestAnimationFrame(animate);
-    console.log('animate running');
-    console.log('scene objects count', scene && scene.children ? scene.children.length : 'no scene');
     updateTankMovement();
     updateBarrelRotation();
     updateBullets();
     updateAITanks();
     checkBulletTankCollision();
     updateCamera();
+    checkWin();
     if (!renderer || !scene || !camera) return;
     renderer.render(scene, camera);
 }
