@@ -3,6 +3,8 @@ using System.Drawing;
 using System.Windows.Forms;
 using ScreenRecorder.RecorderCore;
 using System.IO;
+using System.Drawing.Drawing2D;
+using System.Collections.Generic; // Added for ListBox
 
 namespace ScreenRecorder
 {
@@ -11,167 +13,123 @@ namespace ScreenRecorder
     /// </summary>
     public class MainForm : Form
     {
-        private readonly Button btnStart, btnStop, btnSettings, btnTheme;
-        private readonly Label lblStatus;
-        private readonly PictureBox logoBox;
-        private readonly NotifyIcon trayIcon;
-        private readonly ScreenRecorder.RecorderCore.ScreenRecorder recorder;
-        private ScreenRecorderOptions options;
+        private Button btnStart = null!;
+        private Button btnStop = null!;
+        private Button btnSettings = null!;
+        private Button btnTheme = null!;
+        private Label lblStatus = null!;
+        private NotifyIcon trayIcon = null!;
+        private ScreenRecorder.RecorderCore.ScreenRecorder recorder = null!;
+        private ScreenRecorderOptions options = null!;
         private bool isDark = true;
-        private readonly PictureBox previewBox;
-        private readonly Timer previewTimer;
-        private readonly Timer themeAnimTimer;
+        private PictureBox previewBox = null!;
+        private Timer previewTimer = null!;
+        private Timer themeAnimTimer = null!;
         private float themeAnimProgress = 1f;
         private bool animToDark = true;
         private Color currentBg1, currentBg2, targetBg1, targetBg2;
         private Color currentBtn1, currentBtn2, targetBtn1, targetBtn2;
+        private Label lblSavePath = null!;
 
         public MainForm()
         {
             try
             {
-                // MessageBox.Show("MainForm 构造已执行"); // 移除调试弹窗
-                string logoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "resources", "logo.png");
-                this.Text = "ScreenRecorder";
-                this.FormBorderStyle = FormBorderStyle.FixedSingle;
-                this.MaximizeBox = false;
-                this.MinimizeBox = false;
-                this.StartPosition = FormStartPosition.CenterScreen;
-                this.Width = 420;
-                this.Height = 320;
-                this.BackColor = Color.FromArgb(28, 28, 34);
-                this.Font = new Font("Segoe UI", 11);
-                // 不设置 this.Icon
-                // 顶部 logo
-                logoBox = new PictureBox
-                {
-                    Image = Image.FromFile(logoPath),
-                    SizeMode = PictureBoxSizeMode.Zoom,
-                    Width = 64,
-                    Height = 64,
-                    Left = (this.ClientSize.Width - 64) / 2,
-                    Top = 18
-                };
-                this.Controls.Add(logoBox);
-
-                // 按钮区
-                btnStart = new Button
-                {
-                    Text = "开始录制",
-                    Width = 120,
-                    Height = 40,
-                    Left = 50,
-                    Top = 110,
-                    BackColor = Color.FromArgb(60, 180, 75),
-                    ForeColor = Color.White,
-                    FlatStyle = FlatStyle.Flat
-                };
-                btnStart.FlatAppearance.BorderSize = 0;
-                btnStart.Click += (s, e) => StartRecording();
-
-                btnStop = new Button
-                {
-                    Text = "停止录制",
-                    Width = 120,
-                    Height = 40,
-                    Left = 250,
-                    Top = 110,
-                    BackColor = Color.FromArgb(220, 50, 47),
-                    ForeColor = Color.White,
-                    FlatStyle = FlatStyle.Flat
-                };
-                btnStop.FlatAppearance.BorderSize = 0;
-                btnStop.Click += (s, e) => StopRecording();
-
-                btnSettings = new Button
-                {
-                    Text = "设置",
-                    Width = 120,
-                    Height = 36,
-                    Left = 140,
-                    Top = 180,
-                    BackColor = Color.FromArgb(45, 45, 55),
-                    ForeColor = Color.White,
-                    FlatStyle = FlatStyle.Flat
-                };
-                btnSettings.FlatAppearance.BorderSize = 0;
-                btnSettings.Click += (s, e) => ShowSettings();
-
-                this.Controls.Add(btnStart);
-                this.Controls.Add(btnStop);
-                this.Controls.Add(btnSettings);
-
-                // 初始化渐变色
-                currentBg1 = targetBg1 = Color.FromArgb(127, 0, 255); // 紫色
-                currentBg2 = targetBg2 = Color.FromArgb(225, 0, 255); // 紫色
-                currentBtn1 = targetBtn1 = Color.FromArgb(127, 0, 255);
-                currentBtn2 = targetBtn2 = Color.FromArgb(225, 0, 255);
-
-                // 主题切换动画定时器
-                themeAnimTimer = new Timer { Interval = 16 };
-                themeAnimTimer.Tick += (s, e) => AnimateTheme();
-
-                // 主题切换按钮
-                btnTheme = new Button
-                {
-                    Text = "切换主题",
-                    Width = 120,
-                    Height = 36,
-                    Left = 140,
-                    Top = 230,
-                    FlatStyle = FlatStyle.Flat
-                };
-                btnTheme.FlatAppearance.BorderSize = 0;
-                btnTheme.Click += (s, e) => ToggleTheme();
-                this.Controls.Add(btnTheme);
-
-                // 录制预览区
-                previewBox = new PictureBox
-                {
-                    Left = 20,
-                    Top = 280,
-                    Width = 380,
-                    Height = 80,
-                    BorderStyle = BorderStyle.FixedSingle,
-                    SizeMode = PictureBoxSizeMode.Zoom
-                };
-                this.Controls.Add(previewBox);
-
-                previewTimer = new Timer { Interval = 200 };
-                previewTimer.Tick += (s, e) => RefreshPreview();
-                previewTimer.Start();
-
-                // 状态栏
-                lblStatus = new Label
-                {
-                    Text = "状态：空闲",
-                    ForeColor = Color.LightGray,
-                    AutoSize = false,
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    Dock = DockStyle.Bottom,
-                    Height = 32,
-                    BackColor = Color.FromArgb(38, 38, 44)
-                };
-                this.Controls.Add(lblStatus);
-
-                // 托盘图标
-                trayIcon = new NotifyIcon
-                {
-                    // 不设置 Icon
-                    Text = "ScreenRecorder",
-                    Visible = true
-                };
-                trayIcon.DoubleClick += (s, e) => this.Show();
-
-                // 初始化录制器
                 options = ConfigManager.LoadConfig();
-                recorder = new ScreenRecorder.RecorderCore.ScreenRecorder();
+                this.Text = "ScreenRecorder";
+                this.FormBorderStyle = FormBorderStyle.Sizable;
+                this.MaximizeBox = true;
+                this.MinimizeBox = true;
+                this.DoubleBuffered = true;
+                this.StartPosition = FormStartPosition.CenterScreen;
+                this.Width = 1100;
+                this.Height = 700;
+                this.BackColor = Color.FromArgb(30, 30, 30);
+                this.Font = new Font("Segoe UI", 10);
 
-                // 强制主窗体显示在最前面
-                this.WindowState = FormWindowState.Normal;
-                this.Show();
-                this.BringToFront();
-                this.Activate();
+                // 顶部栏
+                var topBar = new Panel { Height = 40, Dock = DockStyle.Top, BackColor = Color.FromArgb(40, 40, 40) };
+                var lblTitle = new Label { Text = "ScreenRecorder", ForeColor = Color.White, Font = new Font("Segoe UI", 14, FontStyle.Bold), AutoSize = true, Left = 20, Top = 8 };
+                topBar.Controls.Add(lblTitle);
+                this.Controls.Add(topBar);
+
+                // 左侧场景区
+                var leftPanel = new GroupBox { Text = "场景", ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Width = 180, Dock = DockStyle.Left, BackColor = Color.FromArgb(40, 40, 40) };
+                var sceneList = new ListBox { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 10), BackColor = Color.FromArgb(50, 50, 50), ForeColor = Color.White };
+                sceneList.Items.Add("默认场景");
+                leftPanel.Controls.Add(sceneList);
+                this.Controls.Add(leftPanel);
+
+                // 右侧音频区
+                var rightPanel = new GroupBox { Text = "音频混音器", ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Width = 220, Dock = DockStyle.Right, BackColor = Color.FromArgb(40, 40, 40) };
+                var audioLabel = new Label { Text = "麦克风/Aux", Top = 40, Left = 20, Width = 120, ForeColor = Color.White };
+                var audioBar = new ProgressBar { Top = 70, Left = 20, Width = 160, Height = 20, Value = 50, ForeColor = Color.LimeGreen };
+                rightPanel.Controls.Add(audioLabel);
+                rightPanel.Controls.Add(audioBar);
+                this.Controls.Add(rightPanel);
+
+                // 中间预览区
+                var previewPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(60, 60, 60) };
+                var previewBox = new PictureBox { Width = 600, Height = 340, Left = 120, Top = 60, BackColor = Color.Black, SizeMode = PictureBoxSizeMode.Zoom };
+                previewPanel.Controls.Add(previewBox);
+                this.Controls.Add(previewPanel);
+
+                // 右下角控制按钮区
+                var controlPanel = new Panel { Height = 80, Dock = DockStyle.Bottom, BackColor = Color.FromArgb(40, 40, 40) };
+                var btnStart = new Button { Text = "开始录制", Width = 120, Height = 40, Left = 600, Top = 20, BackColor = Color.FromArgb(255, 236, 140), ForeColor = Color.Black, Font = new Font("Segoe UI", 12, FontStyle.Bold) };
+                var btnStop = new Button { Text = "停止录制", Width = 120, Height = 40, Left = 740, Top = 20, BackColor = Color.FromArgb(255, 167, 81), ForeColor = Color.Black, Font = new Font("Segoe UI", 12, FontStyle.Bold) };
+                var btnSettings = new Button { Text = "设置", Width = 100, Height = 36, Left = 880, Top = 22, BackColor = Color.FromArgb(80, 80, 80), ForeColor = Color.White, Font = new Font("Segoe UI", 11, FontStyle.Bold) };
+                var btnExit = new Button { Text = "退出", Width = 100, Height = 36, Left = 990, Top = 22, BackColor = Color.FromArgb(80, 80, 80), ForeColor = Color.White, Font = new Font("Segoe UI", 11, FontStyle.Bold) };
+                controlPanel.Controls.Add(btnStart);
+                controlPanel.Controls.Add(btnStop);
+                controlPanel.Controls.Add(btnSettings);
+                controlPanel.Controls.Add(btnExit);
+                this.Controls.Add(controlPanel);
+
+                // 绑定按钮事件
+                btnStart.Click += (s, e) =>
+                {
+                    try
+                    {
+                        if (recorder == null) recorder = new ScreenRecorder.RecorderCore.ScreenRecorder();
+                        recorder.StartRecording(options);
+                        lblStatus.Text = "状态：录制中...";
+                        // TODO: 刷新预览区为实时画面
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("录制启动失败：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                };
+                btnStop.Click += (s, e) =>
+                {
+                    try
+                    {
+                        recorder?.StopRecording();
+                        lblStatus.Text = "状态：空闲";
+                        // TODO: 恢复预览区为占位图
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("停止录制失败：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                };
+                btnSettings.Click += (s, e) =>
+                {
+                    using var dlg = new SettingsForm(options);
+                    if (dlg.ShowDialog() == DialogResult.OK)
+                    {
+                        options = dlg.UpdatedOptions;
+                        ConfigManager.SaveConfig(options);
+                    }
+                };
+                btnExit.Click += (s, e) => this.Close();
+
+                // 底部状态栏
+                var statusBar = new Panel { Height = 32, Dock = DockStyle.Bottom, BackColor = Color.FromArgb(30, 30, 30) };
+                lblStatus = new Label { Text = "状态：空闲", ForeColor = Color.White, Font = new Font("Segoe UI", 10), AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Dock = DockStyle.Fill };
+                statusBar.Controls.Add(lblStatus);
+                this.Controls.Add(statusBar);
             }
             catch (Exception ex)
             {
@@ -234,10 +192,10 @@ namespace ScreenRecorder
         protected override void OnPaint(PaintEventArgs e)
         {
             // 绘制主背景渐变
-            using var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
+            using var brush = new LinearGradientBrush(
                 this.ClientRectangle,
-                currentBg1,
-                currentBg2,
+                Color.FromArgb(255, 236, 140),
+                Color.FromArgb(255, 167, 81),
                 45f);
             e.Graphics.FillRectangle(brush, this.ClientRectangle);
             base.OnPaint(e);

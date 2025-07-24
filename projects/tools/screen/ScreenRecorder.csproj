@@ -12,6 +12,11 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="SunnyUI">
+      <HintPath>libs\SunnyUI.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
     <None Update="resources\logo.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
