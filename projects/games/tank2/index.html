@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>3D坦克大战（tank-3d）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #222;
+        }
+        #ui-root {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            min-width: 220px;
+            background: rgba(30,30,40,0.7);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px #0008;
+            color: #fff;
+            padding: 18px 24px;
+            font-size: 16px;
+            pointer-events: auto;
+            user-select: none;
+        }
+        .info-panel.right {
+            left: auto;
+            right: 20px;
+        }
+        .dialog {
+            position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%,-50%);
+            background: rgba(40,40,60,0.95);
+            border-radius: 18px;
+            box-shadow: 0 8px 32px #000a;
+            color: #fff;
+            padding: 32px 48px;
+            font-size: 22px;
+            z-index: 100;
+            display: none;
+            pointer-events: auto;
+        }
+        .dialog.show {
+            display: block;
+        }
+        .settings-panel {
+            position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%,-50%);
+            background: rgba(30,30,40,0.98);
+            border-radius: 18px;
+            box-shadow: 0 8px 32px #000a;
+            color: #fff;
+            padding: 32px 48px;
+            font-size: 20px;
+            z-index: 100;
+            display: block;
+            pointer-events: auto;
+        }
+        .settings-panel input, .settings-panel select {
+            font-size: 18px;
+            margin: 8px 0 16px 0;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: none;
+        }
+        .settings-panel label {
+            display: block;
+            margin-top: 12px;
+        }
+        .settings-panel button {
+            font-size: 20px;
+            padding: 8px 32px;
+            border-radius: 8px;
+            border: none;
+            background: #3a8fff;
+            color: #fff;
+            cursor: pointer;
+            margin-top: 18px;
+        }
+        .settings-panel button:hover {
+            background: #2566cc;
+        }
+        #canvas3d {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            background: #222;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas3d"></canvas>
+    <div id="ui-root">
+        <div id="player-info" class="info-panel"></div>
+        <div id="ai-info" class="info-panel right"></div>
+        <div id="win-dialog" class="dialog"></div>
+        <div id="pause-dialog" class="dialog"></div>
+        <div id="settings-panel" class="settings-panel">
+            <h2>3D坦克大战 设置</h2>
+            <label>昵称：<input id="nickname" type="text" value="玩家" maxlength="8"></label>
+            <label>坦克颜色：<input id="color" type="color" value="#3a8fff"></label>
+            <label>AI数量：<select id="ai-count">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select></label>
+            <label>AI难度：<select id="ai-difficulty">
+                <option value="easy">简单</option>
+                <option value="normal" selected>普通</option>
+                <option value="hard">困难</option>
+            </select></label>
+            <button id="start-btn">开始游戏</button>
+        </div>
+    </div>
+    <!-- Three.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
+    <script>
+    // ===================== 常量定义 =====================
+    const MAP_SIZE = 2000;
+    const OBSTACLE_COUNT = 18;
+    const WALL_THICKNESS = 40;
+    const TANK_SIZE = 60;
+    const BULLET_RADIUS = 8;
+    const BULLET_SPEED = 16;
+    const BULLET_LIFETIME = 3000; // ms
+    const TANK_HIT_MAX = 2;
+    const CAMERA_INIT_DIST = 420;
+    const CAMERA_MIN_DIST = 180;
+    const CAMERA_MAX_DIST = 900;
+    const PLAYER_SPEED = 6;
+    const AI_SPEED = 5.2;
+    const TANK_ROTATE_SPEED = 0.08;
+    const BARREL_LENGTH = 48;
+    const SHOOT_INTERVAL = 600; // ms
+    const AI_SHOOT_INTERVAL = 900;
+    const AI_AIM_ERROR = { easy: 0.22, normal: 0.12, hard: 0.04 };
+    const AI_MOVE_ERROR = { easy: 0.18, normal: 0.09, hard: 0.03 };
+    // ===================== 工具函数 =====================
+    function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+    function randRange(a, b) { return a + Math.random() * (b - a); }
+    function randomColor() {
+        const h = Math.floor(Math.random() * 360);
+        return `hsl(${h}, 70%, 55%)`;
+    }
+    function getDistance(a, b) {
+        return Math.sqrt((a.x-b.x)**2 + (a.z-b.z)**2);
+    }
+    // ===================== UI 管理器 =====================
+    class UIManager {
+        constructor() {
+            this.playerInfoEl = document.getElementById("player-info");
+            this.aiInfoEl = document.getElementById("ai-info");
+            this.winDialog = document.getElementById("win-dialog");
+            this.pauseDialog = document.getElementById("pause-dialog");
+            this.settingsPanel = document.getElementById("settings-panel");
+        }
+        updatePlayerInfo(player) {
+            if (!player) { this.playerInfoEl.innerHTML = ""; return; }
+            this.playerInfoEl.innerHTML = `
+                <b>昵称：</b>${player.name}<br>
+                <b>状态：</b>${player.alive ? "存活" : "已阵亡"}<br>
+                <b>被击中：</b>${player.hitCount} / ${TANK_HIT_MAX}<br>
+            `;
+        }
+        updateAIInfo(aiTanks) {
+            let html = `<b>AI坦克</b><br>`;
+            aiTanks.forEach((ai, i) => {
+                html += `${ai.name}：${ai.alive ? "存活" : "阵亡"}（被击中${ai.hitCount}次）<br>`;
+            });
+            this.aiInfoEl.innerHTML = html;
+        }
+        showWinDialog(msg) {
+            this.winDialog.innerHTML = `<b>${msg}</b><br><br><button onclick="location.reload()">再来一局</button>`;
+            this.winDialog.classList.add("show");
+        }
+        showPauseDialog(show) {
+            this.pauseDialog.innerHTML = `<b>游戏已暂停</b><br><br><button onclick="window._game && window._game.resume()">继续</button>`;
+            this.pauseDialog.classList.toggle("show", show);
+        }
+        showSettings(show) {
+            this.settingsPanel.style.display = show ? "block" : "none";
+        }
+    }
+    // ===================== 障碍物类 =====================
+    class Obstacle {
+        constructor(scene) {
+            const w = randRange(60, 120);
+            const h = randRange(60, 120);
+            const x = randRange(-MAP_SIZE/2+100, MAP_SIZE/2-100);
+            const z = randRange(-MAP_SIZE/2+100, MAP_SIZE/2-100);
+            const y = h/2;
+            this.mesh = new THREE.Mesh(
+                new THREE.BoxGeometry(w, h, w),
+                new THREE.MeshPhongMaterial({ color: 0x888888 })
+            );
+            this.mesh.position.set(x, y, z);
+            this.mesh.castShadow = true;
+            this.mesh.receiveShadow = true;
+            this.boundingBox = new THREE.Box3().setFromObject(this.mesh);
+            scene.add(this.mesh);
+        }
+        updateBoundingBox() {
+            this.boundingBox.setFromObject(this.mesh);
+        }
+        checkCollision(obj) {
+            this.updateBoundingBox();
+            return this.boundingBox.intersectsBox(obj.boundingBox);
+        }
+    }
+    // ===================== 墙体类 =====================
+    class Wall {
+        constructor(scene, x, z, w, h) {
+            this.mesh = new THREE.Mesh(
+                new THREE.BoxGeometry(w, 120, h),
+                new THREE.MeshPhongMaterial({ color: 0x444444 })
+            );
+            this.mesh.position.set(x, 60, z);
+            this.mesh.receiveShadow = true;
+            this.boundingBox = new THREE.Box3().setFromObject(this.mesh);
+            scene.add(this.mesh);
+        }
+        updateBoundingBox() {
+            this.boundingBox.setFromObject(this.mesh);
+        }
+        checkCollision(obj) {
+            this.updateBoundingBox();
+            return this.boundingBox.intersectsBox(obj.boundingBox);
+        }
+    }
+    // ===================== 子弹类 =====================
+    class Bullet {
+        /**
+         * @param {THREE.Scene} scene
+         * @param {THREE.Vector3} pos
+         * @param {THREE.Vector3} velocity
+         * @param {Tank} shooter
+         */
+        constructor(scene, pos, velocity, shooter) {
+            this.mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(BULLET_RADIUS, 16, 16),
+                new THREE.MeshPhongMaterial({ color: 0xffe066 })
+            );
+            this.mesh.position.copy(pos);
+            this.mesh.castShadow = true;
+            this.velocity = velocity.clone();
+            this.bornTime = Date.now();
+            this.shooter = shooter;
+            this.alive = true;
+            this.boundingBox = new THREE.Box3().setFromObject(this.mesh);
+            scene.add(this.mesh);
+        }
+        updateBoundingBox() {
+            this.boundingBox.setFromObject(this.mesh);
+        }
+        update(dt, game) {
+            if (!this.alive) return;
+            this.mesh.position.add(this.velocity.clone().multiplyScalar(dt/16));
+            this.updateBoundingBox();
+            // 反弹检测
+            for (const wall of game.walls) {
+                if (wall.checkCollision(this)) {
+                    // 反弹
+                    if (Math.abs(wall.mesh.scale.x) > Math.abs(wall.mesh.scale.z)) {
+                        this.velocity.x *= -1;
+                    } else {
+                        this.velocity.z *= -1;
+                    }
+                }
+            }
+            for (const obs of game.obstacles) {
+                if (obs.checkCollision(this)) {
+                    // 反弹
+                    const dx = this.mesh.position.x - obs.mesh.position.x;
+                    const dz = this.mesh.position.z - obs.mesh.position.z;
+                    if (Math.abs(dx) > Math.abs(dz)) {
+                        this.velocity.x *= -1;
+                    } else {
+                        this.velocity.z *= -1;
+                    }
+                }
+            }
+            // 生命周期
+            if (Date.now() - this.bornTime > BULLET_LIFETIME) {
+                this.destroy(game);
+            }
+        }
+        checkCollision(targets, game) {
+            if (!this.alive) return;
+            for (const t of targets) {
+                if (!t.alive || t === this.shooter) continue;
+                if (this.boundingBox.intersectsBox(t.boundingBox)) {
+                    t.takeHit(game);
+                    this.destroy(game);
+                    break;
+                }
+            }
+        }
+        destroy(game) {
+            if (!this.alive) return;
+            this.alive = false;
+            game.scene.remove(this.mesh);
+        }
+    }
+    // ===================== 坦克类 =====================
+    class Tank {
+        /**
+         * @param {THREE.Scene} scene
+         * @param {string} name
+         * @param {string} color
+         * @param {boolean} isAI
+         */
+        constructor(scene, name, color, isAI = false) {
+            this.name = name;
+            this.color = color;
+            this.isAI = isAI;
+            this.alive = true;
+            this.hitCount = 0;
+            this.lastShootTime = 0;
+            // 机身
+            this.base = new THREE.Mesh(
+                new THREE.CylinderGeometry(TANK_SIZE/2, TANK_SIZE/2, 28, 24),
+                new THREE.MeshPhongMaterial({ color: color })
+            );
+            this.base.castShadow = true;
+            // 炮塔
+            this.turret = new THREE.Mesh(
+                new THREE.CylinderGeometry(TANK_SIZE/2.5, TANK_SIZE/2.5, 18, 20),
+                new THREE.MeshPhongMaterial({ color: 0x222222 })
+            );
+            this.turret.position.y = 18;
+            this.turret.castShadow = true;
+            // 炮管
+            this.barrel = new THREE.Mesh(
+                new THREE.CylinderGeometry(6, 6, BARREL_LENGTH, 16),
+                new THREE.MeshPhongMaterial({ color: 0xcccccc })
+            );
+            this.barrel.position.y = 18;
+            this.barrel.position.z = BARREL_LENGTH/2 + 10;
+            this.barrel.castShadow = true;
+            // Group
+            this.group = new THREE.Group();
+            this.group.add(this.base);
+            this.group.add(this.turret);
+            this.group.add(this.barrel);
+            scene.add(this.group);
+            this.group.position.set(0, 16, 0);
+            this.group.rotation.y = 0;
+            this.turret.rotation.y = 0;
+            this.barrel.rotation.x = Math.PI/2;
+            this.boundingBox = new THREE.Box3().setFromObject(this.base);
+        }
+        get position() { return this.group.position; }
+        get rotation() { return this.group.rotation; }
+        updateBoundingBox() {
+            this.boundingBox.setFromObject(this.base);
+        }
+        move(dir, speed, obstacles, walls) {
+            if (!this.alive) return;
+            const moveVec = dir.clone().normalize().multiplyScalar(speed);
+            const oldPos = this.group.position.clone();
+            this.group.position.add(moveVec);
+            this.updateBoundingBox();
+            // 碰撞检测
+            for (const obs of obstacles) {
+                if (obs.checkCollision(this)) {
+                    this.group.position.copy(oldPos);
+                    this.updateBoundingBox();
+                    return;
+                }
+            }
+            for (const wall of walls) {
+                if (wall.checkCollision(this)) {
+                    this.group.position.copy(oldPos);
+                    this.updateBoundingBox();
+                    return;
+                }
+            }
+        }
+        rotate(angle) {
+            if (!this.alive) return;
+            this.group.rotation.y += angle;
+        }
+        aimAt(targetVec) {
+            if (!this.alive) return;
+            const dx = targetVec.x - this.group.position.x;
+            const dz = targetVec.z - this.group.position.z;
+            const angle = Math.atan2(dx, dz);
+            this.turret.rotation.y = angle - this.group.rotation.y;
+            this.barrel.rotation.y = angle - this.group.rotation.y;
+        }
+        shoot(game) {
+            if (!this.alive) return;
+            const now = Date.now();
+            if (now - this.lastShootTime < (this.isAI ? AI_SHOOT_INTERVAL : SHOOT_INTERVAL)) return;
+            this.lastShootTime = now;
+            // 子弹初始位置与方向严格与炮管一致
+            const barrelWorld = new THREE.Vector3();
+            this.barrel.getWorldPosition(barrelWorld);
+            const barrelDir = new THREE.Vector3();
+            this.barrel.getWorldDirection(barrelDir); // 获取世界坐标下炮管朝向
+            // Three.js getWorldDirection 默认返回 -Z 方向，需反向
+            barrelDir.negate();
+            const velocity = barrelDir.clone().multiplyScalar(BULLET_SPEED);
+            const bullet = new Bullet(game.scene, barrelWorld, velocity, this);
+            game.bullets.push(bullet);
+        }
+        takeHit(game) {
+            if (!this.alive) return;
+            this.hitCount++;
+            if (this.hitCount >= TANK_HIT_MAX) {
+                this.die(game);
+            }
+        }
+        die(game) {
+            this.alive = false;
+            this.base.material.color.set(0x444444);
+            this.turret.material.color.set(0x222222);
+            this.barrel.material.color.set(0x222222);
+        }
+        update() {
+            this.updateBoundingBox();
+        }
+    }
+    // ===================== AI 控制器 =====================
+    class AIController {
+        /**
+         * @param {Tank} tank
+         * @param {Game} game
+         * @param {string} difficulty
+         */
+        constructor(tank, game, difficulty) {
+            this.tank = tank;
+            this.game = game;
+            this.difficulty = difficulty;
+            this.target = null;
+        }
+        chooseTarget() {
+            // 选择最近的存活坦克
+            let minDist = 1e9, target = null;
+            for (const t of [this.game.player, ...this.game.aiTanks]) {
+                if (t === this.tank || !t.alive) continue;
+                const dist = getDistance(this.tank.position, t.position);
+                if (dist < minDist) {
+                    minDist = dist;
+                    target = t;
+                }
+            }
+            this.target = target;
+        }
+        update() {
+            if (!this.tank.alive) return;
+            if (!this.target || !this.target.alive) this.chooseTarget();
+            if (!this.target) return;
+            // 移动方向（带误差）
+            const dx = this.target.position.x - this.tank.position.x + randRange(-AI_MOVE_ERROR[this.difficulty], AI_MOVE_ERROR[this.difficulty])*MAP_SIZE*0.1;
+            const dz = this.target.position.z - this.tank.position.z + randRange(-AI_MOVE_ERROR[this.difficulty], AI_MOVE_ERROR[this.difficulty])*MAP_SIZE*0.1;
+            const moveVec = new THREE.Vector3(dx, 0, dz).normalize();
+            this.tank.move(moveVec, AI_SPEED, this.game.obstacles, this.game.walls);
+            // 机身朝向移动方向
+            const angle = Math.atan2(dx, dz);
+            this.tank.group.rotation.y = angle;
+            // 炮塔瞄准（带误差）
+            const aimX = this.target.position.x + randRange(-AI_AIM_ERROR[this.difficulty], AI_AIM_ERROR[this.difficulty])*TANK_SIZE*2;
+            const aimZ = this.target.position.z + randRange(-AI_AIM_ERROR[this.difficulty], AI_AIM_ERROR[this.difficulty])*TANK_SIZE*2;
+            this.tank.aimAt(new THREE.Vector3(aimX, 0, aimZ));
+            // 射击
+            this.tank.shoot(this.game);
+        }
+    }
+    // ===================== 摄像机控制器 =====================
+    class CameraController {
+        /**
+         * @param {THREE.Camera} camera
+         * @param {Game} game
+         */
+        constructor(camera, game) {
+            this.camera = camera;
+            this.game = game;
+            this.mode = "god"; // god/driver/spectate
+            this.target = game.player;
+            this.distance = CAMERA_INIT_DIST;
+            this.azimuth = Math.PI/4;
+            this.elevation = Math.PI/4;
+            this.lastMouse = null;
+            this.isDragging = false;
+            this.spectateIndex = 0;
+        }
+        update() {
+            if (this.mode === "god") {
+                // 上帝视角，跟随目标
+                if (this.target && this.target.alive) {
+                    const pos = this.target.position;
+                    const x = pos.x + this.distance * Math.sin(this.azimuth) * Math.cos(this.elevation);
+                    const y = pos.y + this.distance * Math.sin(this.elevation) + 80;
+                    const z = pos.z + this.distance * Math.cos(this.azimuth) * Math.cos(this.elevation);
+                    this.camera.position.set(x, y, z);
+                    this.camera.lookAt(pos.x, 24, pos.z);
+                }
+            } else if (this.mode === "driver") {
+                // 驾驶视角，摄像机在坦克后方，朝向与机身一致
+                if (this.target && this.target.alive) {
+                    const pos = this.target.position;
+                    const angle = this.target.group.rotation.y;
+                    // 摄像机在坦克后方一定距离，略高于坦克
+                    const camDist = 90;
+                    const camHeight = 38;
+                    const x = pos.x - Math.sin(angle) * camDist;
+                    const y = pos.y + camHeight;
+                    const z = pos.z - Math.cos(angle) * camDist;
+                    this.camera.position.set(x, y, z);
+                    // 摄像机朝向坦克前方
+                    const lookX = pos.x + Math.sin(angle) * 80;
+                    const lookY = pos.y + 24;
+                    const lookZ = pos.z + Math.cos(angle) * 80;
+                    this.camera.lookAt(lookX, lookY, lookZ);
+                }
+            } else if (this.mode === "spectate") {
+                // 观战模式，方向键旋转
+                const tanks = [this.game.player, ...this.game.aiTanks].filter(t => t.alive);
+                if (tanks.length === 0) return;
+                this.target = tanks[this.spectateIndex % tanks.length];
+                const pos = this.target.position;
+                const x = pos.x + this.distance * Math.sin(this.azimuth) * Math.cos(this.elevation);
+                const y = pos.y + this.distance * Math.sin(this.elevation) + 80;
+                const z = pos.z + this.distance * Math.cos(this.azimuth) * Math.cos(this.elevation);
+                this.camera.position.set(x, y, z);
+                this.camera.lookAt(pos.x, 24, pos.z);
+            }
+        }
+        rotateByMouse(dx, dy) {
+            this.azimuth += dx * 0.012;
+            this.elevation = clamp(this.elevation + dy * 0.012, 0.1, Math.PI/2.2);
+        }
+        zoomByWheel(delta) {
+            this.distance = clamp(this.distance + delta * 8, CAMERA_MIN_DIST, CAMERA_MAX_DIST);
+        }
+        switchMode() {
+            if (this.mode === "god") this.mode = "driver";
+            else if (this.mode === "driver") this.mode = "god";
+        }
+        enterSpectate() {
+            this.mode = "spectate";
+            this.spectateIndex = 0;
+        }
+        nextSpectate() {
+            this.spectateIndex++;
+        }
+        prevSpectate() {
+            this.spectateIndex--;
+            if (this.spectateIndex < 0) this.spectateIndex = 0;
+        }
+    }
+    // ===================== 游戏主控制器 =====================
+    class Game {
+        constructor(config) {
+            this.config = config;
+            this.scene = new THREE.Scene();
+            this.scene.background = new THREE.Color(0x222233);
+            this.camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 1, 6000);
+            this.renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("canvas3d"), antialias: true });
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.shadowMap.enabled = true;
+            this.player = null;
+            this.aiTanks = [];
+            this.bullets = [];
+            this.obstacles = [];
+            this.walls = [];
+            this.uiManager = new UIManager();
+            this.cameraController = new CameraController(this.camera, this);
+            this.aiControllers = [];
+            this.running = false;
+            this.paused = false;
+            this.lastUpdate = Date.now();
+            window._game = this; // 便于UI按钮调用
+        }
+        init() {
+            // 灯光
+            const ambient = new THREE.AmbientLight(0xffffff, 0.38);
+            this.scene.add(ambient);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.82);
+            dirLight.position.set(800, 1200, 800);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            this.scene.add(dirLight);
+            // 地面
+            const ground = new THREE.Mesh(
+                new THREE.BoxGeometry(MAP_SIZE, 12, MAP_SIZE),
+                new THREE.MeshPhongMaterial({ color: 0x2a2a2a })
+            );
+            ground.position.y = -6;
+            ground.receiveShadow = true;
+            this.scene.add(ground);
+            // 随机障碍物
+            for (let i = 0; i < OBSTACLE_COUNT; i++) {
+                this.obstacles.push(new Obstacle(this.scene));
+            }
+            // 墙体
+            const half = MAP_SIZE/2;
+            this.walls.push(new Wall(this.scene, 0, -half+WALL_THICKNESS/2, MAP_SIZE, WALL_THICKNESS)); // top
+            this.walls.push(new Wall(this.scene, 0, half-WALL_THICKNESS/2, MAP_SIZE, WALL_THICKNESS)); // bottom
+            this.walls.push(new Wall(this.scene, -half+WALL_THICKNESS/2, 0, WALL_THICKNESS, MAP_SIZE)); // left
+            this.walls.push(new Wall(this.scene, half-WALL_THICKNESS/2, 0, WALL_THICKNESS, MAP_SIZE)); // right
+            // 玩家坦克
+            this.player = new Tank(this.scene, this.config.nickname, this.config.color, false);
+            this.player.group.position.set(randRange(-MAP_SIZE/2+120, MAP_SIZE/2-120), 16, randRange(-MAP_SIZE/2+120, MAP_SIZE/2-120));
+            // AI坦克
+            for (let i = 0; i < this.config.aiCount; i++) {
+                const ai = new Tank(this.scene, `AI-${i+1}`, randomColor(), true);
+                ai.group.position.set(randRange(-MAP_SIZE/2+120, MAP_SIZE/2-120), 16, randRange(-MAP_SIZE/2+120, MAP_SIZE/2-120));
+                this.aiTanks.push(ai);
+                this.aiControllers.push(new AIController(ai, this, this.config.aiDifficulty));
+            }
+            // 摄像机初始参数
+            this.cameraController.target = this.player;
+            this.cameraController.mode = "god";
+            this.cameraController.distance = CAMERA_INIT_DIST;
+            this.cameraController.azimuth = Math.PI/4;
+            this.cameraController.elevation = Math.PI/4;
+            // UI
+            this.uiManager.updatePlayerInfo(this.player);
+            this.uiManager.updateAIInfo(this.aiTanks);
+        }
+        start() {
+            this.running = true;
+            this.paused = false;
+            this.lastUpdate = Date.now();
+            this.loop();
+        }
+        loop() {
+            if (!this.running) return;
+            if (this.paused) return;
+            const now = Date.now();
+            const dt = clamp(now - this.lastUpdate, 8, 48);
+            this.lastUpdate = now;
+            this.update(dt);
+            this.renderer.render(this.scene, this.camera);
+            requestAnimationFrame(() => this.loop());
+        }
+        update(dt) {
+            // 玩家/AI更新
+            this.player.update();
+            for (const ai of this.aiTanks) ai.update();
+            // AI逻辑
+            for (const aiCtrl of this.aiControllers) aiCtrl.update();
+            // 子弹更新
+            for (const bullet of this.bullets) bullet.update(dt, this);
+            // 子弹碰撞检测
+            for (const bullet of this.bullets) {
+                bullet.checkCollision([this.player, ...this.aiTanks], this);
+            }
+            // 移除死亡子弹
+            this.bullets = this.bullets.filter(b => b.alive);
+            // UI
+            this.uiManager.updatePlayerInfo(this.player);
+            this.uiManager.updateAIInfo(this.aiTanks);
+            // 摄像机
+            this.cameraController.update();
+            // 胜负判定
+            this.checkWin();
+        }
+        handleInput(keys, mouse, mouseBtns) {
+            if (!this.player.alive) return;
+            // WASD移动
+            let dir = new THREE.Vector3();
+            if (keys["KeyW"]) dir.z -= 1;
+            if (keys["KeyS"]) dir.z += 1;
+            if (keys["KeyA"]) dir.x -= 1;
+            if (keys["KeyD"]) dir.x += 1;
+            if (dir.length() > 0) {
+                dir.normalize();
+                this.player.move(dir, PLAYER_SPEED, this.obstacles, this.walls);
+                // 机身朝向移动方向
+                this.player.group.rotation.y = Math.atan2(dir.x, dir.z);
+            }
+            // 炮塔朝向鼠标
+            if (mouse) {
+                const mouseVec = this.screenToWorld(mouse.x, mouse.y);
+                if (mouseVec) this.player.aimAt(mouseVec);
+            }
+            // 左键射击
+            if (mouseBtns[0]) {
+                this.player.shoot(this);
+            }
+        }
+        screenToWorld(x, y) {
+            // 屏幕坐标转世界坐标（地面交点）
+            const mouse = new THREE.Vector2(
+                (x / window.innerWidth) * 2 - 1,
+                -(y / window.innerHeight) * 2 + 1
+            );
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, this.camera);
+            const intersects = raycaster.intersectObject(this.scene.children[2]); // 地面
+            if (intersects.length > 0) {
+                return intersects[0].point;
+            }
+            return null;
+        }
+        checkWin() {
+            // 只剩一个坦克存活
+            const aliveTanks = [this.player, ...this.aiTanks].filter(t => t.alive);
+            if (aliveTanks.length === 1 && this.running) {
+                this.running = false;
+                const winner = aliveTanks[0];
+                if (winner === this.player) {
+                    this.uiManager.showWinDialog("恭喜你获得胜利！");
+                } else {
+                    this.uiManager.showWinDialog(`${winner.name} 获胜！`);
+                }
+            }
+        }
+        pause() {
+            this.paused = true;
+            this.uiManager.showPauseDialog(true);
+        }
+        resume() {
+            this.paused = false;
+            this.uiManager.showPauseDialog(false);
+            this.lastUpdate = Date.now();
+            this.loop();
+        }
+        reset() {
+            location.reload();
+        }
+    }
+    // ===================== 入口与事件绑定 =====================
+    let game = null;
+    let keys = {};
+    let mouse = null;
+    let mouseBtns = [false, false, false];
+    let dragging = false;
+    let lastMouse = { x: 0, y: 0 };
+    // 启动游戏
+    document.getElementById("start-btn").onclick = () => {
+        const nickname = document.getElementById("nickname").value || "玩家";
+        const color = document.getElementById("color").value;
+        const aiCount = parseInt(document.getElementById("ai-count").value);
+        const aiDifficulty = document.getElementById("ai-difficulty").value;
+        document.getElementById("settings-panel").style.display = "none";
+        game = new Game({ nickname, color, aiCount, aiDifficulty });
+        game.init();
+        game.start();
+        bindEvents();
+    };
+    function bindEvents() {
+        // 键盘
+        window.addEventListener("keydown", e => {
+            keys[e.code] = true;
+            // ESC暂停
+            if (e.code === "Escape" && game && game.running) {
+                if (!game.paused) game.pause();
+                else game.resume();
+            }
+            // 死亡观战切换
+            if (!game.player.alive && game.cameraController.mode === "spectate") {
+                if (e.code === "ArrowLeft") game.cameraController.prevSpectate();
+                if (e.code === "ArrowRight") game.cameraController.nextSpectate();
+            }
+            // 视角切换
+            if (e.code === "Tab") {
+                game.cameraController.switchMode();
+                e.preventDefault();
+            }
+        });
+        window.addEventListener("keyup", e => {
+            keys[e.code] = false;
+        });
+        // 鼠标
+        window.addEventListener("mousedown", e => {
+            mouseBtns[e.button] = true;
+            if (e.button === 2) {
+                dragging = true;
+                lastMouse.x = e.clientX;
+                lastMouse.y = e.clientY;
+            }
+        });
+        window.addEventListener("mouseup", e => {
+            mouseBtns[e.button] = false;
+            if (e.button === 2) dragging = false;
+        });
+        window.addEventListener("mousemove", e => {
+            mouse = { x: e.clientX, y: e.clientY };
+            if (dragging && game) {
+                const dx = e.clientX - lastMouse.x;
+                const dy = e.clientY - lastMouse.y;
+                game.cameraController.rotateByMouse(dx, dy);
+                lastMouse.x = e.clientX;
+                lastMouse.y = e.clientY;
+            }
+        });
+        window.addEventListener("wheel", e => {
+            if (game) game.cameraController.zoomByWheel(e.deltaY);
+        });
+        // 禁止右键菜单
+        window.addEventListener("contextmenu", e => e.preventDefault());
+        // 自适应
+        window.addEventListener("resize", () => {
+            if (!game) return;
+            game.camera.aspect = window.innerWidth / window.innerHeight;
+            game.camera.updateProjectionMatrix();
+            game.renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        // 主循环输入
+        setInterval(() => {
+            if (game && game.running && !game.paused) {
+                game.handleInput(keys, mouse, mouseBtns);
+            }
+        }, 16);
+        // 死亡观战
+        setInterval(() => {
+            if (game && !game.player.alive && game.cameraController.mode !== "spectate") {
+                game.cameraController.enterSpectate();
+            }
+        }, 500);
+    }
+    </script>
+</body>
+</html>

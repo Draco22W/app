@@ -5,6 +5,7 @@ from datetime import datetime
 import pyautogui
 from PIL import Image
 from PyQt5 import QtWidgets, QtGui, QtCore
+import shutil
 
 # 指定保存目录
 SAVE_DIR = r"D:\screenshots"
@@ -12,25 +13,47 @@ SAVE_DIR = r"D:\screenshots"
 # 确保保存目录存在
 os.makedirs(SAVE_DIR, exist_ok=True)
 
+# 开机自启动设置
+import getpass
+import winreg
+
+def add_to_startup():
+    """
+    将本程序添加到Windows开机自启动（当前用户）。
+    """
+    exe_path = sys.executable
+    script_path = os.path.abspath(__file__)
+    # 判断是否为打包exe，否则用pythonw启动
+    if exe_path.lower().endswith("python.exe") or exe_path.lower().endswith("pythonw.exe"):
+        cmd = f'"{exe_path}" "{script_path}"'
+    else:
+        cmd = f'"{exe_path}"'
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                            r"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, winreg.KEY_SET_VALUE)
+        winreg.SetValueEx(key, "AutoScreenshotApp", 0, winreg.REG_SZ, cmd)
+        winreg.CloseKey(key)
+    except Exception as e:
+        print(f"添加开机自启动失败: {e}")
+
+try:
+    add_to_startup()
+except Exception as e:
+    print(f"添加开机自启动失败: {e}")
+
 class ScreenshotWorker(QtCore.QThread):
     notify = QtCore.pyqtSignal(str)
     def run(self):
         while True:
-            now = datetime.now()
-            # 只在每分钟的零秒截屏
-            if now.second == 0:
-                timestamp = now.strftime("%Y%m%d_%H%M%S")
-                file_path = os.path.join(SAVE_DIR, f"{timestamp}.png")
-                # 截屏
-                screenshot = pyautogui.screenshot()
-                # 保存为PNG
-                screenshot.save(file_path)
-                self.notify.emit(f"已保存截图: {file_path}")
-                # 等待1秒，避免重复截屏
+            for i in range(45):
                 time.sleep(1)
-            else:
-                # 每0.2秒检查一次
-                time.sleep(0.2)
+            self.notify.emit("15秒后将自动截屏！")
+            time.sleep(15)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            file_path = os.path.join(SAVE_DIR, f"{timestamp}.png")
+            screenshot = pyautogui.screenshot()
+            screenshot.save(file_path)
+            self.notify.emit(f"已保存截图: {file_path}")
 
 class TrayApp(QtWidgets.QSystemTrayIcon):
     def __init__(self, icon, parent=None):
@@ -57,17 +80,18 @@ class TrayApp(QtWidgets.QSystemTrayIcon):
 class MainWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
+        icon = self.style().standardIcon(QtWidgets.QStyle.SP_ComputerIcon)
         self.setWindowTitle("自动截屏程序")
-        self.setWindowIcon(QtGui.QIcon.fromTheme("camera"))
+        self.setWindowIcon(icon)
         self.resize(300, 120)
         layout = QtWidgets.QVBoxLayout()
-        self.label = QtWidgets.QLabel("程序正在后台自动截屏，每分钟零秒保存到 D:/screenshots")
+        self.label = QtWidgets.QLabel("程序正在后台自动截屏，每隔60秒保存到 D:/screenshots")
         layout.addWidget(self.label)
         self.log = QtWidgets.QTextEdit()
         self.log.setReadOnly(True)
         layout.addWidget(self.log)
         self.setLayout(layout)
-        self.tray = TrayApp(QtGui.QIcon.fromTheme("camera"), self)
+        self.tray = TrayApp(icon, self)
         self.tray.show()
         self.worker = ScreenshotWorker()
         self.worker.notify.connect(self.append_log)
