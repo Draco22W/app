@@ -1,0 +1,10 @@
+{
+  "OutputPath": "output.mp4",
+  "Width": 1920,
+  "Height": 1080,
+  "Fps": 90,
+  "VideoCodec": "libx264",
+  "AudioDevice": "麦克风阵列 (2- 适用于数字麦克风的英特尔® 智音技术)",
+  "RecordAudio": true,
+  "Region": "full"
+}
