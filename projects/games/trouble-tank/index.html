@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>坦克大战 - 超大无缝灰色地图</title>
+    <style>
+        body { background: #222; margin: 0; }
+        #game-container {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            align-items: center;
+            /* 适应内容高度 */
+        }
+        #player-panel {
+            width: 90px;
+            min-width: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 80vh;
+            margin-right: 8px;
+            background: linear-gradient(135deg, rgba(40,40,60,0.92) 60%, rgba(60,60,80,0.7) 100%);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px #111a, 0 0 0 2px #3338;
+            padding-top: 18px;
+            border: 1.5px solid #444a;
+        }
+        #player-name {
+            background: linear-gradient(90deg, #fff 30%, #aaf 70%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 8px;
+            text-shadow: 0 0 6px #aaf8, 0 2px 6px #222a;
+            letter-spacing: 1px;
+        }
+        #hp-bar-bg {
+            width: 60px;
+            height: 12px;
+            background: #2a2a2a;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            position: relative;
+            border: 1.5px solid #aa2222;
+            box-shadow: 0 0 4px #aa222288;
+        }
+        #hp-bar-fg {
+            height: 100%;
+            background: linear-gradient(90deg, #22dd22 60%, #66ff66 100%);
+            border-radius: 6px;
+            transition: width 0.25s cubic-bezier(.4,1.6,.6,1);
+            box-shadow: 0 0 6px #66ff6688;
+        }
+        #hp-bar-value {
+            position: absolute;
+            left: 0; right: 0; top: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 1px 2px #222, 0 0 2px #fff8;
+            pointer-events: none;
+        }
+        html, body { height: 100%; width: 100%; overflow: hidden; }
+        .map-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(60,60,80,0.92) 60%, rgba(100,100,140,0.7) 100%);
+            border-radius: 24px;
+            box-shadow: 0 6px 32px #111a, 0 0 0 3px #3338;
+            padding: 18px;
+            margin: 0 0 0 0;
+            border: 2.5px solid #444a;
+            min-width: 0;
+        }
+        canvas { image-rendering: pixelated; image-rendering: crisp-edges; border-radius: 16px; box-shadow: 0 0 12px #2228; background: #333; }
+        #settings-modal {
+            position: fixed;
+            left: 0; top: 0; right: 0; bottom: 0;
+            background: rgba(30,30,40,0.45);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #settings-panel {
+            background: linear-gradient(135deg, #23243a 60%, #3a3a5a 100%);
+            border-radius: 18px;
+            box-shadow: 0 8px 32px #111b, 0 0 0 2px #3338;
+            padding: 32px 32px 24px 32px;
+            min-width: 320px;
+            min-height: 220px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .settings-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #fff;
+            text-align: center;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 8px #222a;
+        }
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #eee;
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+        #settings-panel label {
+            min-width: 80px;
+            text-align: right;
+        }
+        #settings-panel input[type="text"] {
+            border-radius: 6px;
+            border: 1.5px solid #444a;
+            padding: 4px 8px;
+            font-size: 15px;
+            background: #23243a;
+            color: #fff;
+            outline: none;
+        }
+        #settings-panel input[type="color"] {
+            width: 32px; height: 22px; border: none; background: none; cursor: pointer;
+        }
+        #settings-panel select {
+            border-radius: 6px;
+            border: 1.5px solid #444a;
+            padding: 4px 8px;
+            font-size: 15px;
+            background: #23243a;
+            color: #fff;
+            outline: none;
+        }
+        #settings-close {
+            background: linear-gradient(90deg, #4a6cff 60%, #6cf 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 6px 24px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px #2224;
+            transition: background 0.2s;
+        }
+        #settings-close:hover {
+            background: linear-gradient(90deg, #6cf 60%, #4a6cff 100%);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="player-panel">
+            <div id="player-name">玩家1</div>
+            <div id="hp-bar-bg">
+                <div id="hp-bar-fg" style="width: 100%"></div>
+                <div id="hp-bar-value">100/100</div>
+            </div>
+        </div>
+        <div class="map-wrapper">
+            <!-- Phaser canvas会自动插入到这里 -->
+        </div>
+    </div>
+    <!-- 设置窗口 -->
+    <div id="settings-modal" style="display:none;">
+        <div id="settings-panel">
+            <div class="settings-title">设置</div>
+            <div class="settings-row">
+                <label>抗锯齿：</label>
+                <select id="antialias-select">
+                    <option value="on">开启（最大）</option>
+                    <option value="off">关闭（像素风）</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <label>姓名：</label>
+                <input id="name-input" type="text" maxlength="12" value="主玩家1" />
+            </div>
+            <div class="settings-row">
+                <label>坦克颜色：</label>
+                <input id="tank-color-input" type="color" value="#339933" />
+            </div>
+            <div class="settings-row">
+                <label>子弹颜色：</label>
+                <input id="bullet-color-input" type="color" value="#ffff00" />
+            </div>
+            <div class="settings-row">
+                <label>泛光颜色：</label>
+                <input id="glow-color-input" type="color" value="#99ff99" />
+            </div>
+            <div class="settings-row">
+                <label>黑夜模式：</label>
+                <input id="night-mode-input" type="checkbox" />
+            </div>
+            <div class="settings-row" style="justify-content:center;">
+                <button id="settings-close">关闭</button>
+            </div>
+        </div>
+    </div>
+    <script src="phaser.min.js"></script>
+    <script>
+        const MAP_SIZE = 30; // 30x30
+        const TILE_SIZE = 30; // 每格30像素
+        const TILE_COLOR = 0xaaaaaa; // 地图底色
+        const OBSTACLE_COLOR = 0x444444; // 障碍物颜色
+        let obstacles = [];
+        let obstacleMap = [];
+
+        function getGameSize() {
+            const minEdge = Math.min(window.innerWidth, window.innerHeight);
+            const size = Math.floor(minEdge * 0.95);
+            return {
+                width: size,
+                height: size,
+                scale: size / (MAP_SIZE * TILE_SIZE)
+            };
+        }
+
+        let game, scaleInfo;
+        let tank, tankX, tankY, cursors, wasdKeys, barrel;
+        let globalMouse = { x: 0, y: 0 };
+        let bullets = [];
+        const BULLET_SPEED = 7.2;
+        const BULLET_RADIUS = TILE_SIZE * 0.18;
+        let BULLET_COLOR = 0xffff00;
+        let glowColor = 0x99ff99;
+        const BULLET_LIFETIME = 3000; // 子弹最大存活时间（毫秒）
+
+        // 玩家属性
+        let playerName = "主玩家1";
+        let playerMaxHp = 100;
+        let playerHp = 100;
+
+        let nightMode = false;
+        let flashlightActive = false;
+        let flashlightTimer = 0;
+        let flashlightItems = [];
+        let nightMaskGraphics;
+        let FLASHLIGHT_DURATION = 25000; // 25秒
+        let FLASHLIGHT_RADIUS = TILE_SIZE * 3.2;
+        let FLASHLIGHT_RADIUS_BIG = TILE_SIZE * 7.5;
+        let FLASHLIGHT_COLOR = 0xffff66;
+
+        // 全局变量声明区，确保只声明一次且在所有函数外部
+        let tankColor = 0x339933;
+
+        function createGame(pixelArt = false, antialias = true) {
+            scaleInfo = getGameSize();
+            if (game) {
+                game.destroy(true);
+            }
+            game = new Phaser.Game({
+                type: Phaser.AUTO,
+                width: MAP_SIZE * TILE_SIZE,
+                height: MAP_SIZE * TILE_SIZE,
+                parent: document.querySelector('.map-wrapper'),
+                backgroundColor: "#333",
+                scale: {
+                    mode: Phaser.Scale.NONE,
+                    autoCenter: Phaser.Scale.CENTER_BOTH
+                },
+                render: {
+                    pixelArt,
+                    antialias
+                },
+                scene: {
+                    create,
+                    update
+                }
+            });
+            // 增强抗锯齿功能：同步canvas CSS
+            setTimeout(() => {
+                const cvs = document.querySelector('.map-wrapper canvas');
+                if (cvs) {
+                    if (antialias) {
+                        cvs.style.imageRendering = 'auto';
+                        cvs.style.filter = 'none';
+                    } else {
+                        cvs.style.imageRendering = 'pixelated';
+                        cvs.style.filter = 'none';
+                    }
+                }
+            }, 200);
+        }
+
+        function create() {
+            // 生成障碍物地图（二维数组）
+            obstacleMap = [];
+            for (let y = 0; y < MAP_SIZE; y++) {
+                const row = [];
+                for (let x = 0; x < MAP_SIZE; x++) {
+                    // 边缘一圈障碍物
+                    if (x === 0 || y === 0 || x === MAP_SIZE - 1 || y === MAP_SIZE - 1) {
+                        row.push(1);
+                    } else {
+                        row.push(0);
+                    }
+                }
+                obstacleMap.push(row);
+            }
+            // 随机生成内部障碍物，保证坦克出生点和周围有路
+            const safeZone = 2; // 坦克出生点周围2格安全
+            for (let y = 1; y < MAP_SIZE - 1; y++) {
+                for (let x = 1; x < MAP_SIZE - 1; x++) {
+                    // 出生点及其周围不放障碍物
+                    if (Math.abs(x - MAP_SIZE / 2) <= safeZone && Math.abs(y - MAP_SIZE / 2) <= safeZone) continue;
+                    // 随机生成障碍物，概率适中
+                    if (Math.random() < 0.13) {
+                        // 避免形成死路：只在上下左右有空格时放置
+                        let emptyAround = 0;
+                        if (obstacleMap[y-1][x] === 0) emptyAround++;
+                        if (obstacleMap[y+1][x] === 0) emptyAround++;
+                        if (obstacleMap[y][x-1] === 0) emptyAround++;
+                        if (obstacleMap[y][x+1] === 0) emptyAround++;
+                        if (emptyAround >= 2) {
+                            row = obstacleMap[y];
+                            row[x] = 1;
+                        }
+                    }
+                }
+            }
+            // 渲染无缝隙灰色大地图
+            obstacles = [];
+            for (let y = 0; y < MAP_SIZE; y++) {
+                for (let x = 0; x < MAP_SIZE; x++) {
+                    // 地图底色
+                    this.add.rectangle(
+                        x * TILE_SIZE + TILE_SIZE / 2,
+                        y * TILE_SIZE + TILE_SIZE / 2,
+                        TILE_SIZE,
+                        TILE_SIZE,
+                        TILE_COLOR
+                    );
+                    // 障碍物
+                    if (obstacleMap[y][x] === 1) {
+                        const obs = this.add.rectangle(
+                            x * TILE_SIZE + TILE_SIZE / 2,
+                            y * TILE_SIZE + TILE_SIZE / 2,
+                            TILE_SIZE,
+                            TILE_SIZE,
+                            OBSTACLE_COLOR
+                        ).setOrigin(0.5);
+                        this.physics && this.physics.add && this.physics.add.existing(obs, true); // 兼容未来物理
+                        obstacles.push({ x, y, rect: obs });
+                    }
+                }
+            }
+            // 记录障碍物像素坐标，便于碰撞检测
+            obstacles.forEach(o => {
+                o.left = o.x * TILE_SIZE;
+                o.right = o.left + TILE_SIZE;
+                o.top = o.y * TILE_SIZE;
+                o.bottom = o.top + TILE_SIZE;
+            });
+
+            // 坦克参数
+            const tankBodySize = TILE_SIZE * 0.8; // 机身宽高
+            const tankBarrelWidth = TILE_SIZE * 0.2; // 炮管宽
+            const tankBarrelLength = TILE_SIZE * 0.9; // 炮管长，外部更长
+            let barrelColor = 0x222222;
+
+            // 坦克初始位置（地图中央）
+            tankX = (MAP_SIZE / 2) * TILE_SIZE;
+            tankY = (MAP_SIZE / 2) * TILE_SIZE;
+            tank = this.add.container(tankX, tankY);
+
+            // 机身（大矩形）
+            const body = this.add.rectangle(0, 0, tankBodySize, tankBodySize, tankColor, 1).setOrigin(0.5);
+            body.name = 'player-body';
+            // 泛光效果：发光描边
+            body.setStrokeStyle(6, glowColor, 0.7);
+            body.setShadow && body.setShadow(0, 0, phaserColorToHex(glowColor), 12, true, true);
+            // 炮管origin设为(0.5, 1)，底部在机身中心
+            barrel = this.add.rectangle(0, 0, tankBarrelWidth, tankBarrelLength, barrelColor, 1).setOrigin(0.5, 1);
+            barrel.name = 'player-barrel';
+            // 炮管泛光
+            barrel.setStrokeStyle(4, glowColor, 0.6);
+            barrel.setShadow && barrel.setShadow(0, 0, phaserColorToHex(glowColor), 10, true, true);
+
+            // 添加到坦克组
+            tank.add([body, barrel]);
+            // 方便后续控制：tank.list[0]是机身，tank.list[1]是炮管
+
+            // WASD按键监听
+            wasdKeys = this.input.keyboard.addKeys({
+                up: Phaser.Input.Keyboard.KeyCodes.W,
+                left: Phaser.Input.Keyboard.KeyCodes.A,
+                down: Phaser.Input.Keyboard.KeyCodes.S,
+                right: Phaser.Input.Keyboard.KeyCodes.D
+            });
+
+            // 增强输入体验：窗口失焦时重置WASD状态，防止卡键
+            window.addEventListener('blur', () => {
+                if (wasdKeys) {
+                    wasdKeys.up.isDown = false;
+                    wasdKeys.down.isDown = false;
+                    wasdKeys.left.isDown = false;
+                    wasdKeys.right.isDown = false;
+                }
+            });
+
+            // 监听全局鼠标移动，记录真实坐标
+            window.addEventListener('mousemove', function(e) {
+                globalMouse.x = e.clientX;
+                globalMouse.y = e.clientY;
+            });
+
+            // 缩放画布以适应窗口
+            this.scale.displaySize.setAspectRatio(1);
+            this.scale.refresh();
+            const canvas = this.sys.game.canvas;
+            canvas.style.width = scaleInfo.width + "px";
+            canvas.style.height = scaleInfo.height + "px";
+            canvas.style.display = "block";
+            canvas.style.margin = "auto";
+
+            // 鼠标左键发射子弹
+            this.input.on('pointerdown', (pointer) => {
+                if (pointer.leftButtonDown()) {
+                    // 计算炮管末端世界坐标
+                    const angle = barrel.rotation;
+                    // 炮管末端相对坦克中心的偏移
+                    const offset = (TILE_SIZE * 0.9);
+                    const endX = tank.x + Math.sin(angle) * offset;
+                    const endY = tank.y - Math.cos(angle) * offset;
+                    // 检查末端是否在障碍物内
+                    let blocked = false;
+                    for (const o of obstacles) {
+                        if (
+                            endX > o.left && endX < o.right &&
+                            endY > o.top && endY < o.bottom
+                        ) {
+                            blocked = true;
+                            break;
+                        }
+                    }
+                    if (blocked) return; // 在障碍物内不发射
+                    // 子弹速度分量
+                    const vx = Math.sin(angle) * BULLET_SPEED;
+                    const vy = -Math.cos(angle) * BULLET_SPEED;
+                    // 创建子弹
+                    const bullet = this.add.circle(endX, endY, BULLET_RADIUS, BULLET_COLOR, 1);
+                    // 子弹泛光
+                    bullet.setStrokeStyle(3, glowColor, 0.8);
+                    bullet.setShadow && bullet.setShadow(0, 0, phaserColorToHex(glowColor), 12, true, true);
+                    bullets.push({ sprite: bullet, vx, vy });
+                }
+            });
+
+            // 玩家属性UI放左侧空白区
+            // 移除Phaser内的名字和血量条相关代码
+
+            // 黑夜遮罩
+            if (nightMode) {
+                nightMaskGraphics = this.add.graphics({ x: 0, y: 0 });
+                nightMaskGraphics.setDepth(1000);
+            } else {
+                nightMaskGraphics = null;
+            }
+
+            // 随机生成手电筒道具
+            flashlightItems = [];
+            if (nightMode) {
+                for (let i = 0; i < 4; i++) {
+                    let placed = false;
+                    while (!placed) {
+                        let fx = Phaser.Math.Between(2, MAP_SIZE - 3);
+                        let fy = Phaser.Math.Between(2, MAP_SIZE - 3);
+                        // 不生成在障碍物或出生点附近
+                        if (obstacleMap[fy][fx] === 0 && (Math.abs(fx - MAP_SIZE/2) > 2 || Math.abs(fy - MAP_SIZE/2) > 2)) {
+                            let item = this.add.circle(
+                                fx * TILE_SIZE + TILE_SIZE/2,
+                                fy * TILE_SIZE + TILE_SIZE/2,
+                                TILE_SIZE * 0.28,
+                                FLASHLIGHT_COLOR,
+                                1
+                            ).setDepth(900);
+                            flashlightItems.push(item);
+                            placed = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        function update() {
+            if (!tank) return;
+            let speed = 3 * scaleInfo.scale; // 自适应缩放下的速度
+            let moved = false;
+            let nextX = tankX, nextY = tankY;
+            if (wasdKeys.left.isDown) {
+                nextX -= speed;
+                moved = true;
+            }
+            if (wasdKeys.right.isDown) {
+                nextX += speed;
+                moved = true;
+            }
+            if (wasdKeys.up.isDown) {
+                nextY -= speed;
+                moved = true;
+            }
+            if (wasdKeys.down.isDown) {
+                nextY += speed;
+                moved = true;
+            }
+            // 边界限制
+            const half = TILE_SIZE * 0.8 / 2;
+            const min = half;
+            const max = MAP_SIZE * TILE_SIZE - half;
+            nextX = Phaser.Math.Clamp(nextX, min, max);
+            nextY = Phaser.Math.Clamp(nextY, min, max);
+            // 碰撞检测：坦克机身与障碍物
+            let collide = false;
+            for (const o of obstacles) {
+                if (
+                    nextX + half > o.left && nextX - half < o.right &&
+                    nextY + half > o.top && nextY - half < o.bottom
+                ) {
+                    collide = true;
+                    break;
+                }
+            }
+            if (!collide) {
+                tankX = nextX;
+                tankY = nextY;
+                if (moved) {
+                    tank.x = tankX;
+                    tank.y = tankY;
+                }
+            } else if (moved) {
+                // 贴墙滑动：分别尝试只移动x或只移动y
+                let tryX = true, tryY = true;
+                // 只移动x
+                let collideX = false;
+                for (const o of obstacles) {
+                    if (
+                        nextX + half > o.left && nextX - half < o.right &&
+                        tankY + half > o.top && tankY - half < o.bottom
+                    ) {
+                        collideX = true;
+                        break;
+                    }
+                }
+                // 只移动y
+                let collideY = false;
+                for (const o of obstacles) {
+                    if (
+                        tankX + half > o.left && tankX - half < o.right &&
+                        nextY + half > o.top && nextY - half < o.bottom
+                    ) {
+                        collideY = true;
+                        break;
+                    }
+                }
+                // 如果只移动x不碰撞，允许x方向滑动
+                if (!collideX) {
+                    tankX = nextX;
+                    tank.x = tankX;
+                }
+                // 如果只移动y不碰撞，允许y方向滑动
+                if (!collideY) {
+                    tankY = nextY;
+                    tank.y = tankY;
+                }
+            }
+            // 鼠标控制炮管旋转（修正版）
+            const canvas = game.canvas;
+            const rect = canvas.getBoundingClientRect();
+            const scale = scaleInfo.scale;
+            // 鼠标在canvas内的逻辑坐标
+            const mouseX = (globalMouse.x - rect.left) / scale;
+            const mouseY = (globalMouse.y - rect.top) / scale;
+            // 计算角度（机身中心到鼠标）
+            const angle = Phaser.Math.Angle.Between(tankX, tankY, mouseX, mouseY);
+            barrel.rotation = angle + Math.PI / 2;
+
+            const now = Date.now();
+            // 子弹移动与清理
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.sprite.x += b.vx;
+                b.sprite.y += b.vy;
+                // 子弹反弹检测
+                let reflected = false;
+                for (const o of obstacles) {
+                    // 粗略AABB碰撞
+                    if (
+                        b.sprite.x + BULLET_RADIUS > o.left && b.sprite.x - BULLET_RADIUS < o.right &&
+                        b.sprite.y + BULLET_RADIUS > o.top && b.sprite.y - BULLET_RADIUS < o.bottom
+                    ) {
+                        // 判断是水平还是垂直反弹
+                        const prevX = b.sprite.x - b.vx;
+                        const prevY = b.sprite.y - b.vy;
+                        if (
+                            prevX + BULLET_RADIUS <= o.left || prevX - BULLET_RADIUS >= o.right
+                        ) {
+                            b.vx = -b.vx; // 水平反弹
+                            reflected = true;
+                        }
+                        if (
+                            prevY + BULLET_RADIUS <= o.top || prevY - BULLET_RADIUS >= o.bottom
+                        ) {
+                            b.vy = -b.vy; // 垂直反弹
+                            reflected = true;
+                        }
+                        if (reflected) {
+                            // 反弹后将子弹推离障碍物，避免卡住
+                            b.sprite.x += b.vx;
+                            b.sprite.y += b.vy;
+                        }
+                        break;
+                    }
+                }
+                // 超出地图边界则销毁
+                if (
+                    b.sprite.x < 0 || b.sprite.x > MAP_SIZE * TILE_SIZE ||
+                    b.sprite.y < 0 || b.sprite.y > MAP_SIZE * TILE_SIZE
+                ) {
+                    b.sprite.destroy();
+                    bullets.splice(i, 1);
+                    continue;
+                }
+                // 子弹飞行超时自动消失
+                if (!b.birth) b.birth = now;
+                if (now - b.birth > BULLET_LIFETIME) {
+                    b.sprite.destroy();
+                    bullets.splice(i, 1);
+                }
+            }
+
+            // 更新HTML左侧UI
+            document.getElementById('player-name').textContent = playerName;
+            const hpPercent = Math.max(0, Math.min(1, playerHp / playerMaxHp));
+            document.getElementById('hp-bar-fg').style.width = (hpPercent * 100) + '%';
+            document.getElementById('hp-bar-value').textContent = `${Math.round(playerHp)}/${playerMaxHp}`;
+
+            // 黑夜遮罩绘制
+            if (nightMode && nightMaskGraphics) {
+                nightMaskGraphics.clear();
+                if (!flashlightActive) {
+                    nightMaskGraphics.fillStyle(0x000000, 0.82);
+                    nightMaskGraphics.fillRect(0, 0, MAP_SIZE * TILE_SIZE, MAP_SIZE * TILE_SIZE);
+                    // 视野圆
+                    nightMaskGraphics.setBlendMode(Phaser.BlendModes.ERASE);
+                    nightMaskGraphics.fillCircle(tankX, tankY, FLASHLIGHT_RADIUS);
+                    nightMaskGraphics.setBlendMode(Phaser.BlendModes.NORMAL);
+                }
+                // flashlightActive 时不绘制遮罩，地图全亮
+            }
+
+            // 手电筒道具检测
+            if (nightMode && flashlightItems.length > 0) {
+                for (let i = flashlightItems.length - 1; i >= 0; i--) {
+                    let item = flashlightItems[i];
+                    let dx = tankX - item.x;
+                    let dy = tankY - item.y;
+                    if (dx * dx + dy * dy < (TILE_SIZE * 0.5) * (TILE_SIZE * 0.5)) {
+                        item.destroy();
+                        flashlightItems.splice(i, 1);
+                        flashlightActive = true;
+                        flashlightTimer = Date.now();
+                    }
+                }
+            }
+            // 手电筒计时
+            if (flashlightActive && Date.now() - flashlightTimer > FLASHLIGHT_DURATION) {
+                flashlightActive = false;
+            }
+        }
+
+        // 设置窗口逻辑
+        function hexToPhaserColor(hex) {
+            return parseInt(hex.replace('#', '0x'));
+        }
+        function phaserColorToHex(num) {
+            return '#' + num.toString(16).padStart(6, '0');
+        }
+        function setAntialiasMode(mode) {
+            // 仅能通过重建game实现
+            let pixelArt = (mode === 'off') ? true : false;
+            let antialias = (mode === 'on');
+            // 记录设置
+            localStorage.setItem('antialias', mode);
+            // 重新创建game
+            setTimeout(() => {
+                createGame(pixelArt, antialias);
+            }, 50);
+        }
+        function openSettings() {
+            document.getElementById('settings-modal').style.display = 'flex';
+            document.getElementById('name-input').value = playerName;
+            document.getElementById('tank-color-input').value = phaserColorToHex(tankColor);
+            document.getElementById('bullet-color-input').value = phaserColorToHex(BULLET_COLOR);
+            document.getElementById('glow-color-input').value = phaserColorToHex(glowColor);
+            document.getElementById('antialias-select').value = (localStorage.getItem('antialias') || 'on');
+            document.getElementById('night-mode-input').checked = nightMode;
+        }
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('settings-modal');
+                if (modal.style.display === 'flex') {
+                    closeSettings();
+                } else {
+                    openSettings();
+                }
+            }
+        });
+        document.getElementById('settings-close').onclick = closeSettings;
+        document.getElementById('antialias-select').onchange = function() {
+            setAntialiasMode(this.value);
+        };
+        document.getElementById('name-input').oninput = function() {
+            playerName = this.value;
+        };
+        document.getElementById('tank-color-input').oninput = function() {
+            tankColor = hexToPhaserColor(this.value);
+            // 实时更新坦克颜色
+            if (tank && tank.list && tank.list[0]) tank.list[0].fillColor = tankColor;
+        };
+        document.getElementById('bullet-color-input').oninput = function() {
+            BULLET_COLOR = hexToPhaserColor(this.value);
+        };
+        document.getElementById('glow-color-input').oninput = function() {
+            glowColor = hexToPhaserColor(this.value);
+            // 实时更新坦克和子弹泛光颜色
+            if (tank && tank.list && tank.list[0]) tank.list[0].setStrokeStyle(6, glowColor, 0.7);
+            if (tank && tank.list && tank.list[1]) tank.list[1].setStrokeStyle(4, glowColor, 0.6);
+        };
+        // 设置窗口黑夜模式开关
+        document.getElementById('night-mode-input').onchange = function() {
+            nightMode = this.checked;
+            createGame(
+                (localStorage.getItem('antialias') || 'on') === 'off',
+                (localStorage.getItem('antialias') || 'on') === 'on'
+            );
+        };
+        // 打开设置时同步黑夜模式开关
+        const oldOpenSettings = openSettings;
+        openSettings = function() {
+            oldOpenSettings();
+            document.getElementById('night-mode-input').checked = nightMode;
+        };
+        // 读取抗锯齿设置
+        let antialiasSetting = localStorage.getItem('antialias') || 'on';
+        createGame(antialiasSetting === 'off', antialiasSetting === 'on');
+        window.addEventListener("resize", () => {
+            createGame();
+        });
+    </script>
+    <script>
+    // 禁用右键菜单，防止右键影响游戏体验
+    window.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    </script>
+</body>
+</html> 
