@@ -164,6 +164,135 @@
             background: linear-gradient(90deg, #6cf 60%, #4a6cff 100%);
         }
     </style>
+    <style>
+    #start-modal {
+        position: fixed;
+        left: 0; top: 0; right: 0; bottom: 0;
+        background: rgba(30,30,40,0.55);
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    #start-panel {
+        background: linear-gradient(135deg, #23243a 60%, #3a3a5a 100%);
+        border-radius: 22px;
+        box-shadow: 0 8px 32px #111b, 0 0 0 2px #3338;
+        padding: 48px 48px 32px 48px;
+        min-width: 340px;
+        min-height: 220px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        animation: winner-pop 0.5s cubic-bezier(.4,1.6,.6,1);
+    }
+    .start-title {
+        font-size: 32px;
+        font-weight: bold;
+        color: #fff;
+        margin-bottom: 18px;
+        letter-spacing: 2px;
+        text-shadow: 0 2px 8px #222a;
+    }
+    .start-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #eee;
+        font-size: 18px;
+        margin-bottom: 2px;
+    }
+    #start-btn {
+        background: linear-gradient(90deg, #4a6cff 60%, #6cf 100%);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 20px;
+        font-weight: bold;
+        padding: 10px 36px;
+        cursor: pointer;
+        box-shadow: 0 2px 8px #2224;
+        transition: background 0.2s;
+        margin-top: 18px;
+    }
+    #start-btn:hover {
+        background: linear-gradient(90deg, #6cf 60%, #4a6cff 100%);
+    }
+    </style>
+    <style>
+    /* 科技感暗色调开始界面 */
+    #start-modal {
+        position: fixed; left: 0; top: 0; right: 0; bottom: 0;
+        background: radial-gradient(ellipse at center, #181c2a 60%, #10121a 100%);
+        z-index: 10001; display: flex; align-items: center; justify-content: center;
+        overflow: hidden;
+        animation: fadeInBg 1s;
+    }
+    @keyframes fadeInBg { from { opacity: 0; } to { opacity: 1; } }
+    #start-panel {
+        background: linear-gradient(135deg, #23243a 60%, #23243a 100%);
+        border-radius: 22px; box-shadow: 0 8px 32px #111b, 0 0 0 2px #3338;
+        padding: 48px 48px 32px 48px; min-width: 360px; min-height: 260px;
+        display: flex; flex-direction: column; align-items: center; gap: 18px;
+        animation: popIn 0.7s cubic-bezier(.4,1.6,.6,1);
+        border: 1.5px solid #3af;
+        box-shadow: 0 0 40px #3af8, 0 0 0 2px #3338;
+        position: relative;
+    }
+    @keyframes popIn { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    .start-title {
+        font-size: 36px; font-weight: bold; color: #fff; margin-bottom: 18px;
+        letter-spacing: 2px; text-shadow: 0 2px 16px #3af8, 0 2px 8px #222a;
+        text-align: center;
+    }
+    .start-row {
+        display: flex; align-items: center; gap: 12px; color: #eee; font-size: 18px; margin-bottom: 2px;
+    }
+    #start-btn, #start-settings-btn, #start-maker-btn {
+        background: linear-gradient(90deg, #4a6cff 60%, #6cf 100%);
+        color: #fff; border: none; border-radius: 8px; font-size: 20px; font-weight: bold;
+        padding: 10px 36px; cursor: pointer; box-shadow: 0 2px 8px #2224; transition: background 0.2s;
+        margin-top: 18px; margin-bottom: 0; margin-right: 0; margin-left: 0;
+        letter-spacing: 1px;
+    }
+    #start-btn:hover, #start-settings-btn:hover, #start-maker-btn:hover {
+        background: linear-gradient(90deg, #6cf 60%, #4a6cff 100%);
+        box-shadow: 0 0 16px #3af8;
+    }
+    #start-btn { margin-bottom: 8px; }
+    #start-maker-btn { background: linear-gradient(90deg, #333 60%, #3af 100%); font-size: 16px; margin-top: 8px; }
+    #start-maker-btn:hover { background: linear-gradient(90deg, #3af 60%, #333 100%); }
+    #start-settings-btn { background: linear-gradient(90deg, #222 60%, #6cf 100%); font-size: 16px; margin-top: 8px; }
+    #start-settings-btn:hover { background: linear-gradient(90deg, #6cf 60%, #222 100%); }
+    #start-ai-count { width: 48px; font-size: 18px; border-radius: 6px; border: 1.5px solid #3af; background: #181c2a; color: #fff; text-align: center; }
+    /* 制作人弹窗 */
+    #maker-modal { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(20,30,40,0.7); z-index: 10002; display: flex; align-items: center; justify-content: center; animation: fadeInBg 0.5s; }
+    #maker-panel { background: #23243a; border-radius: 18px; box-shadow: 0 8px 32px #111b, 0 0 0 2px #3af8; padding: 36px 36px 24px 36px; min-width: 320px; min-height: 120px; display: flex; flex-direction: column; align-items: center; gap: 18px; animation: popIn 0.5s; border: 1.5px solid #3af; }
+    .maker-title { font-size: 24px; font-weight: bold; color: #3af; margin-bottom: 8px; letter-spacing: 2px; text-shadow: 0 2px 8px #3af8; }
+    .maker-name { font-size: 20px; color: #fff; margin-bottom: 8px; text-shadow: 0 2px 8px #222a; }
+    .maker-btn { background: linear-gradient(90deg, #4a6cff 60%, #6cf 100%); color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; padding: 8px 28px; cursor: pointer; box-shadow: 0 2px 8px #2224; transition: background 0.2s; margin-top: 12px; }
+    .maker-btn:hover { background: linear-gradient(90deg, #6cf 60%, #4a6cff 100%); }
+    /* 太空坦克动画背景 */
+    #start-bg-canvas { position: absolute; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
+    </style>
+    <style>
+    /* 自定义鼠标样式 */
+    body, #game-container, .map-wrapper, canvas {
+        cursor: none !important;
+    }
+    #custom-cursor {
+        position: fixed; left: 0; top: 0; width: 32px; height: 32px; pointer-events: none; z-index: 10010;
+        mix-blend-mode: lighten;
+        transition: filter 0.2s;
+    }
+    #custom-cursor .cursor-dot {
+        position: absolute; left: 12px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: #3af; box-shadow: 0 0 12px #3af8, 0 0 24px #3af8; }
+    #custom-cursor .cursor-cross {
+        position: absolute; left: 15px; top: 0; width: 2px; height: 32px; background: linear-gradient(#3af,#fff,#3af); border-radius: 1px; opacity: 0.7; }
+    #custom-cursor .cursor-cross-h {
+        position: absolute; left: 0; top: 15px; width: 32px; height: 2px; background: linear-gradient(90deg,#3af,#fff,#3af); border-radius: 1px; opacity: 0.7; }
+    </style>
 </head>
 <body>
     <div id="game-container">
@@ -214,6 +343,31 @@
             </div>
         </div>
     </div>
+    <div id="start-modal">
+        <canvas id="start-bg-canvas"></canvas>
+        <div id="start-panel">
+            <div class="start-title">坦克大战</div>
+            <div class="start-row">
+                <label for="start-ai-count">电脑玩家数量：</label>
+                <input id="start-ai-count" type="number" min="0" max="3" value="1" />
+            </div>
+            <button id="start-btn">开始游戏</button>
+            <button id="start-settings-btn">设置</button>
+            <button id="start-maker-btn">制作人</button>
+        </div>
+    </div>
+    <div id="maker-modal" style="display:none;">
+        <div id="maker-panel">
+            <div class="maker-title">制作人</div>
+            <div class="maker-name">刘海龙爸爸</div>
+            <button class="maker-btn" onclick="document.getElementById('maker-modal').style.display='none'">关闭</button>
+        </div>
+    </div>
+    <div id="custom-cursor">
+        <div class="cursor-dot"></div>
+        <div class="cursor-cross"></div>
+        <div class="cursor-cross-h"></div>
+    </div>
     <script src="phaser.min.js"></script>
     <script>
         const MAP_SIZE = 30; // 30x30
@@ -247,6 +401,11 @@
         let playerName = "主玩家1";
         let playerMaxHp = 100;
         let playerHp = 100;
+        let playerHitCount = 0;
+        let playerInvincible = false;
+        let playerInvincibleTimer = 0;
+        const PLAYER_MAX_HIT = 5;
+        const PLAYER_INVINCIBLE_TIME = 1000; // 1秒
 
         let nightMode = false;
         let flashlightActive = false;
@@ -260,11 +419,41 @@
 
         // 全局变量声明区，确保只声明一次且在所有函数外部
         let tankColor = 0x339933;
+        let aiCount = 1;
+        let aiTanks = [];
+        const AI_COLORS = [0x3366cc, 0xcc3333, 0xccaa33];
+        let redFlashTimer = 0;
+        let winnerShown = false;
+        const AI_MAX_HIT = 5;
+        const AI_INVINCIBLE_TIME = 1000;
+        let playerInvincibleTime = 0;
+        let playerHealTime = 0;
+        let aiInvincibleTime = [];
+        let aiHealTime = [];
+        let itemList = [];
+        const ITEM_TYPES = ['heal', 'invincible'];
+        const ITEM_COLORS = { heal: 0x33ff33, invincible: 0x33ccff };
+        const ITEM_ICON = { heal: '💊', invincible: '🛡️' };
+        const HEAL_AMOUNT = 20;
+        const INVINCIBLE_DURATION = 5000;
 
-        function createGame(pixelArt = false, antialias = true) {
+        let resizeListenerBound = false;
+        let centerInterval = null;
+        let creatingGame = false;
+        async function createGame(pixelArt = false, antialias = true) {
+            if (creatingGame) return;
+            creatingGame = true;
             scaleInfo = getGameSize();
             if (game) {
-                game.destroy(true);
+                try { game.destroy(true); } catch(e) {}
+                game = null;
+                // 清理 .map-wrapper 下所有canvas和子节点
+                const mw = document.querySelector('.map-wrapper');
+                if (mw) {
+                    while (mw.firstChild) mw.removeChild(mw.firstChild);
+                }
+                // 等待一帧，确保资源释放
+                await new Promise(res => setTimeout(res, 100));
             }
             game = new Phaser.Game({
                 type: Phaser.AUTO,
@@ -285,19 +474,35 @@
                     update
                 }
             });
-            // 增强抗锯齿功能：同步canvas CSS
-            setTimeout(() => {
-                const cvs = document.querySelector('.map-wrapper canvas');
-                if (cvs) {
-                    if (antialias) {
-                        cvs.style.imageRendering = 'auto';
-                        cvs.style.filter = 'none';
-                    } else {
-                        cvs.style.imageRendering = 'pixelated';
-                        cvs.style.filter = 'none';
-                    }
-                }
-            }, 200);
+            creatingGame = false;
+            // 只绑定一次resize和居中定时器
+            if (!resizeListenerBound) {
+                window.addEventListener('resize', safeUpdateMapWrapperCenter);
+                resizeListenerBound = true;
+            }
+            if (centerInterval) clearInterval(centerInterval);
+            centerInterval = setInterval(safeUpdateMapWrapperCenter, 200);
+            setTimeout(safeUpdateMapWrapperCenter, 500);
+        }
+
+        // 优化地图居中调用时机，防止DOM未渲染时出错
+        function updateMapWrapperCenter() {
+            const playerPanel = document.getElementById('player-panel');
+            const mapWrapper = document.querySelector('.map-wrapper');
+            if (!playerPanel || !mapWrapper) return;
+            const panelRect = playerPanel.getBoundingClientRect();
+            const mapRect = mapWrapper.getBoundingClientRect();
+            const winW = window.innerWidth;
+            // 计算左侧面板宽度
+            const leftWidth = panelRect.width;
+            // 让地图整体居中
+            const mapWidth = mapRect.width;
+            // 目标地图左边距 = (窗口宽度 - 地图宽度) / 2 - 左侧面板宽度 / 2
+            const marginLeft = Math.max(0, (winW - mapWidth) / 2 - leftWidth / 2);
+            mapWrapper.style.marginLeft = marginLeft + 'px';
+        }
+        function safeUpdateMapWrapperCenter() {
+            try { updateMapWrapperCenter(); } catch(e) {}
         }
 
         function create() {
@@ -460,7 +665,7 @@
                     // 子弹泛光
                     bullet.setStrokeStyle(3, glowColor, 0.8);
                     bullet.setShadow && bullet.setShadow(0, 0, phaserColorToHex(glowColor), 12, true, true);
-                    bullets.push({ sprite: bullet, vx, vy });
+                    bullets.push({ sprite: bullet, vx, vy, fromAI: false, shooter: 'player' });
                 }
             });
 
@@ -498,10 +703,114 @@
                     }
                 }
             }
+
+            // 生成AI坦克
+            aiTanks = [];
+            for (let i = 0; i < aiCount; i++) {
+                // 随机生成在安全区外的空地
+                let placed = false;
+                let ax, ay;
+                while (!placed) {
+                    ax = Phaser.Math.Between(2, MAP_SIZE - 3);
+                    ay = Phaser.Math.Between(2, MAP_SIZE - 3);
+                    if (obstacleMap[ay][ax] === 0 && (Math.abs(ax - MAP_SIZE/2) > 2 || Math.abs(ay - MAP_SIZE/2) > 2)) {
+                        placed = true;
+                    }
+                }
+                let tankX = ax * TILE_SIZE + TILE_SIZE/2;
+                let tankY = ay * TILE_SIZE + TILE_SIZE/2;
+                let color = AI_COLORS[i % AI_COLORS.length];
+                let aiTank = this.add.container(tankX, tankY);
+                let body = this.add.rectangle(0, 0, TILE_SIZE * 0.8, TILE_SIZE * 0.8, color, 1).setOrigin(0.5);
+                body.setStrokeStyle(6, 0xffffff, 0.5);
+                let barrel = this.add.rectangle(0, 0, TILE_SIZE * 0.2, TILE_SIZE * 0.9, 0x222222, 1).setOrigin(0.5, 1);
+                barrel.setStrokeStyle(4, 0xffffff, 0.4);
+                aiTank.add([body, barrel]);
+                aiTank.body = body;
+                aiTank.barrel = barrel;
+                aiTank.ai = { target: null, fireCooldown: 0, vx: 0, vy: 0 };
+                aiTank.aiColor = color;
+                aiTanks.push(aiTank);
+            }
+            // AI血量和无敌状态
+            for (let i = 0; i < aiTanks.length; i++) {
+                aiTanks[i].hitCount = 0;
+                aiTanks[i].invincible = false;
+                aiTanks[i].invincibleTimer = 0;
+            }
+            playerAlive = true;
+            aiAlive = Array(aiCount).fill(true);
+            aiInvincibleTime = Array(aiCount).fill(0);
+            aiHealTime = Array(aiCount).fill(0);
+            // 记录所有出生点
+            let spawnPoints = [];
+            // 玩家出生点
+            spawnPoints.push({ x: Math.floor(MAP_SIZE/2), y: Math.floor(MAP_SIZE/2) });
+            // AI出生点
+            for (let i = 0; i < aiCount; i++) {
+                let ax, ay, safe = false;
+                while (!safe) {
+                    ax = Phaser.Math.Between(2, MAP_SIZE - 3);
+                    ay = Phaser.Math.Between(2, MAP_SIZE - 3);
+                    safe = true;
+                    for (let sp of spawnPoints) {
+                        if (Math.abs(ax - sp.x) <= 2 && Math.abs(ay - sp.y) <= 2) { safe = false; break; }
+                    }
+                    if (safe) spawnPoints.push({ x: ax, y: ay });
+                }
+            }
+            // 清空出生点及其周围2格的障碍物
+            for (let sp of spawnPoints) {
+                for (let dy = -2; dy <= 2; dy++) {
+                    for (let dx = -2; dx <= 2; dx++) {
+                        let tx = sp.x + dx, ty = sp.y + dy;
+                        if (tx >= 0 && tx < MAP_SIZE && ty >= 0 && ty < MAP_SIZE) {
+                            obstacleMap[ty][tx] = 0;
+                        }
+                    }
+                }
+            }
+            // 随机生成道具
+            itemList = [];
+            for (let i = 0; i < 3; i++) {
+                let placed = false;
+                while (!placed) {
+                    let fx = Phaser.Math.Between(2, MAP_SIZE - 3);
+                    let fy = Phaser.Math.Between(2, MAP_SIZE - 3);
+                    // 不生成在出生安全区
+                    let safe = true;
+                    for (let sp of spawnPoints) {
+                        if (Math.abs(fx - sp.x) <= 2 && Math.abs(fy - sp.y) <= 2) { safe = false; break; }
+                    }
+                    if (obstacleMap[fy][fx] === 0 && safe) {
+                        let type = ITEM_TYPES[Math.floor(Math.random()*ITEM_TYPES.length)];
+                        let item = this.add.circle(
+                            fx * TILE_SIZE + TILE_SIZE/2,
+                            fy * TILE_SIZE + TILE_SIZE/2,
+                            TILE_SIZE * 0.28,
+                            ITEM_COLORS[type],
+                            1
+                        ).setDepth(900);
+                        item.setData('type', type);
+                        itemList.push(item);
+                        placed = true;
+                    }
+                }
+            }
         }
 
         function update() {
+            if (gamePaused) return;
             if (!tank) return;
+            if (!playerAlive) {
+                if (wasdKeys) {
+                    wasdKeys.up.isDown = false;
+                    wasdKeys.down.isDown = false;
+                    wasdKeys.left.isDown = false;
+                    wasdKeys.right.isDown = false;
+                }
+                return;
+            }
             let speed = 3 * scaleInfo.scale; // 自适应缩放下的速度
             let moved = false;
             let nextX = tankX, nextY = tankY;
@@ -646,11 +955,351 @@
                 }
             }
 
+            // AI坦克基础行为
+            for (let i = 0; i < aiTanks.length; i++) {
+                if (!aiAlive[i]) continue;
+                let ai = aiTanks[i];
+                // 如果AI出生点被障碍物覆盖，强制移到最近空地
+                let ax = Math.round(ai.x / TILE_SIZE), ay = Math.round(ai.y / TILE_SIZE);
+                if (obstacleMap[ay] && obstacleMap[ay][ax] === 1) {
+                    // 找最近空地
+                    let found = false;
+                    for (let r = 1; r < 5 && !found; r++) {
+                        for (let dx = -r; dx <= r; dx++) {
+                            for (let dy = -r; dy <= r; dy++) {
+                                let tx = ax + dx, ty = ay + dy;
+                                if (tx >= 0 && tx < MAP_SIZE && ty >= 0 && ty < MAP_SIZE && obstacleMap[ty][tx] === 0) {
+                                    ai.x = tx * TILE_SIZE + TILE_SIZE/2;
+                                    ai.y = ty * TILE_SIZE + TILE_SIZE/2;
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (found) break;
+                        }
+                    }
+                }
+                // 只有血量低于40时才会主动捡道具
+                let target = null;
+                if ((ai.hitCount / AI_MAX_HIT) > 0.6) {
+                    let nearestItem = null, minItemDist = 1e9;
+                    for (let item of itemList) {
+                        let dx = ai.x - item.x, dy = ai.y - item.y;
+                        let d = dx*dx + dy*dy;
+                        // 只考虑距离自己最近且没有其他AI更近的道具
+                        let closest = true;
+                        for (let k = 0; k < aiTanks.length; k++) {
+                            if (k !== i && aiAlive[k]) {
+                                let adx = aiTanks[k].x - item.x, ady = aiTanks[k].y - item.y;
+                                let ad = adx*adx + ady*ady;
+                                if (ad < d) { closest = false; break; }
+                            }
+                        }
+                        if (closest && d < minItemDist) { minItemDist = d; nearestItem = item; }
+                    }
+                    if (nearestItem && minItemDist < Math.pow(TILE_SIZE*10,2)) {
+                        target = { x: nearestItem.x, y: nearestItem.y };
+                    }
+                }
+                if (!target) {
+                    // 选择最近的活着目标（玩家或其他AI，不能选自己）
+                    let candidates = [];
+                    if (playerAlive) candidates.push({ x: tankX, y: tankY, isPlayer: true, idx: -1, hit: playerHitCount });
+                    for (let j = 0; j < aiTanks.length; j++) {
+                        if (j !== i && aiAlive[j]) candidates.push({ x: aiTanks[j].x, y: aiTanks[j].y, isPlayer: false, idx: j, hit: aiTanks[j].hitCount||0 });
+                    }
+                    // 优先攻击血量最低的敌人，偶尔协作夹击玩家
+                    let minHit = Math.min(...candidates.map(c=>c.hit));
+                    let minHitCandidates = candidates.filter(c=>c.hit===minHit);
+                    let t = null;
+                    if (Math.random()<0.2 && playerAlive) {
+                        // 20%概率优先夹击玩家
+                        t = candidates.find(c=>c.isPlayer);
+                    }
+                    if (!t) {
+                        // 其余情况优先攻击血量最低的敌人
+                        let minDist = 1e9;
+                        for (let c of minHitCandidates) {
+                            let dx = c.x - ai.x, dy = c.y - ai.y;
+                            let d = dx*dx + dy*dy;
+                            if (d < minDist) { minDist = d; t = c; }
+                        }
+                    }
+                    target = t;
+                }
+                if (!target || typeof target.x !== 'number' || typeof target.y !== 'number') continue;
+                // --- AI动态策略切换 ---
+                // 记录目标上一次位置，预测未来位置
+                if (!ai.lastTargetPos) ai.lastTargetPos = { x: target.x, y: target.y };
+                let vx = target.x - ai.lastTargetPos.x;
+                let vy = target.y - ai.lastTargetPos.y;
+                ai.lastTargetPos = { x: target.x, y: target.y };
+                let dx = target.x - ai.x, dy = target.y - ai.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                let bulletTime = dist / BULLET_SPEED;
+                let predX = target.x + vx * bulletTime;
+                let predY = target.y + vy * bulletTime;
+                // --- AI状态决策 ---
+                let aiMode = 'attack';
+                if ((ai.hitCount / AI_MAX_HIT) > 0.6) {
+                    // 血量低，优先补给/逃跑
+                    aiMode = 'heal';
+                } else if (dist < TILE_SIZE * 3) {
+                    // 距离过近，优先规避
+                    aiMode = 'evade';
+                }
+                // --- AI移动决策 ---
+                let speed = 2 * scaleInfo.scale;
+                let moveX = 0, moveY = 0;
+                let half = TILE_SIZE * 0.8 / 2;
+                if (aiMode === 'heal') {
+                    // 远离敌人/靠近补给
+                    let bestItem = null, minItemDist = 1e9;
+                    for (let item of itemList) {
+                        let d = (ai.x-item.x)**2 + (ai.y-item.y)**2;
+                        if (d < minItemDist) { minItemDist = d; bestItem = item; }
+                    }
+                    if (bestItem) {
+                        let idx = Math.atan2(bestItem.y-ai.y, bestItem.x-ai.x);
+                        moveX = Math.cos(idx) * speed;
+                        moveY = Math.sin(idx) * speed;
+                    } else {
+                        // 远离目标
+                        let away = Math.atan2(ai.y-target.y, ai.x-target.x);
+                        moveX = Math.cos(away) * speed;
+                        moveY = Math.sin(away) * speed;
+                    }
+                } else if (aiMode === 'evade') {
+                    // 侧移或后退
+                    let away = Math.atan2(ai.y-target.y, ai.x-target.x);
+                    moveX = Math.cos(away+Math.PI/2) * speed;
+                    moveY = Math.sin(away+Math.PI/2) * speed;
+                } else {
+                    // 攻击模式，靠近目标
+                    // --- 障碍绕行升级：记忆点 ---
+                    ai.stuckCount = ai.stuckCount || 0;
+                    ai.lastPos = ai.lastPos || {x:ai.x, y:ai.y};
+                    if (Math.abs(ai.x-ai.lastPos.x)<1 && Math.abs(ai.y-ai.lastPos.y)<1) {
+                        ai.stuckCount++;
+                    } else {
+                        ai.stuckCount=0;
+                    }
+                    ai.lastPos = {x:ai.x, y:ai.y};
+                    let tryAngles = [0, Math.PI/4, -Math.PI/4, Math.PI/2, -Math.PI/2, Math.PI*3/4, -Math.PI*3/4];
+                    let bestDir = null;
+                    let minDist = Infinity;
+                    let stuck = true;
+                    for (let dtheta of tryAngles) {
+                        let angle = Math.atan2(dy, dx) + dtheta;
+                        let tx = ai.x + Math.cos(angle) * speed;
+                        let ty = ai.y + Math.sin(angle) * speed;
+                        let collide = false;
+                        for (const o of obstacles) {
+                            if (
+                                tx + half > o.left && tx - half < o.right &&
+                                ty + half > o.top && ty - half < o.bottom
+                            ) { collide = true; break; }
+                        }
+                        if (!collide) {
+                            stuck = false;
+                            let distToTarget = (tx - target.x) ** 2 + (ty - target.y) ** 2;
+                            let angleWeight = Math.abs(dtheta) > Math.PI/2 ? 0.7 : 1;
+                            if (distToTarget * angleWeight < minDist) {
+                                minDist = distToTarget * angleWeight;
+                                bestDir = { moveX: tx - ai.x, moveY: ty - ai.y };
+                            }
+                        }
+                    }
+                    if (bestDir) {
+                        moveX = bestDir.moveX;
+                        moveY = bestDir.moveY;
+                        ai.stuckCount = 0;
+                    } else {
+                        ai.stuckCount++;
+                        if (ai.stuckCount > 20) {
+                            // 随机尝试8个方向强制脱困
+                            let found = false;
+                            for (let k = 0; k < 8; k++) {
+                                let randAngle = Math.random() * Math.PI * 2;
+                                let tx = ai.x + Math.cos(randAngle) * speed;
+                                let ty = ai.y + Math.sin(randAngle) * speed;
+                                let collide = false;
+                                for (const o of obstacles) {
+                                    if (tx + half > o.left && tx - half < o.right && ty + half > o.top && ty - half < o.bottom) {
+                                        collide = true; break;
+                                    }
+                                }
+                                if (!collide) {
+                                    moveX = tx - ai.x;
+                                    moveY = ty - ai.y;
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found) { moveX = 0; moveY = 0; }
+                        } else if (ai.stuckCount > 10) {
+                            let backAngle = Math.atan2(dy, dx) + Math.PI;
+                            moveX = Math.cos(backAngle) * speed;
+                            moveY = Math.sin(backAngle) * speed;
+                        }
+                    }
+                }
+                ai.x += moveX;
+                ai.y += moveY;
+                // --- AI预判射击 ---
+                ai.ai.fireCooldown--;
+                if (ai.ai.fireCooldown <= 0 && dist < TILE_SIZE * 10) {
+                    // 预判目标未来位置
+                    let shootAngle = Phaser.Math.Angle.Between(ai.x, ai.y, predX, predY) + Phaser.Math.FloatBetween(-0.12, 0.12) + Math.PI/2;
+                    let offset = TILE_SIZE * 0.9;
+                    let endX = ai.x + Math.sin(shootAngle) * offset;
+                    let endY = ai.y - Math.cos(shootAngle) * offset;
+                    // 检查障碍物
+                    let blocked = false;
+                    for (const o of obstacles) {
+                        if (endX > o.left && endX < o.right && endY > o.top && endY < o.bottom) {
+                            blocked = true; break;
+                        }
+                    }
+                    if (!blocked) {
+                        let bullet = ai.scene.add.circle(endX, endY, BULLET_RADIUS, ai.aiColor, 1);
+                        bullet.setStrokeStyle(3, glowColor, 0.8);
+                        bullet.setShadow && bullet.setShadow(0, 0, phaserColorToHex(glowColor), 12, true, true);
+                        let vx = Math.sin(shootAngle) * BULLET_SPEED;
+                        let vy = -Math.cos(shootAngle) * BULLET_SPEED;
+                        bullets.push({ sprite: bullet, vx, vy, fromAI: true, shooter: i });
+                        ai.ai.fireCooldown = 30 + Math.floor(Math.random()*10); // 0.5秒冷却
+                    }
+                }
+                // --- AI炮管朝向预判点 ---
+                let targetAngle = Phaser.Math.Angle.Between(ai.x, ai.y, predX, predY) + Math.PI/2;
+                ai.barrel.rotation = Phaser.Math.Angle.RotateTo(ai.barrel.rotation, targetAngle, 0.12);
+                // --- AI 躲避子弹优先级最高 ---
+                ai.dodgeTimer = ai.dodgeTimer || 0;
+                let danger = false;
+                let dodgeDir = null;
+                for (let b of bullets) {
+                    if (b.shooter === i) continue;
+                    let bdx = ai.x - b.sprite.x, bdy = ai.y - b.sprite.y;
+                    let bdist = Math.sqrt(bdx*bdx + bdy*bdy);
+                    if (bdist > TILE_SIZE * 7) continue;
+                    let bulletDir = Math.atan2(b.vy, b.vx);
+                    let toAI = Math.atan2(bdy, bdx);
+                    let angleDiff = Math.abs(Phaser.Math.Angle.Wrap(bulletDir - toAI));
+                    if (angleDiff < 0.4) {
+                        danger = true;
+                        // 优先侧移
+                        let sideAngle1 = bulletDir + Math.PI/2;
+                        let sideAngle2 = bulletDir - Math.PI/2;
+                        let tryAngles = [sideAngle1, sideAngle2, bulletDir + Math.PI];
+                        for (let ang of tryAngles) {
+                            let tx = ai.x + Math.cos(ang) * speed * 1.2;
+                            let ty = ai.y + Math.sin(ang) * speed * 1.2;
+                            let collide = false;
+                            for (const o of obstacles) {
+                                if (
+                                    tx + half > o.left && tx - half < o.right &&
+                                    ty + half > o.top && ty - half < o.bottom
+                                ) { collide = true; break; }
+                            }
+                            if (!collide) {
+                                dodgeDir = { moveX: tx - ai.x, moveY: ty - ai.y };
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+                if (danger && dodgeDir) {
+                    ai.dodgeTimer = 10;
+                }
+                if (ai.dodgeTimer > 0 && dodgeDir) {
+                    moveX = dodgeDir.moveX;
+                    moveY = dodgeDir.moveY;
+                    ai.dodgeTimer--;
+                } else {
+                    // --- AI动态策略切换与移动决策（原有代码） ---
+                    // ...原有aiMode/补给/逃跑/攻击/障碍绕行等逻辑...
+                    // 这里保留原有的aiMode判断和移动决策
+                    // ...
+                }
+                ai.x += moveX;
+                ai.y += moveY;
+            }
+
             // 更新HTML左侧UI
             document.getElementById('player-name').textContent = playerName;
             const hpPercent = Math.max(0, Math.min(1, playerHp / playerMaxHp));
-            document.getElementById('hp-bar-fg').style.width = (hpPercent * 100) + '%';
-            document.getElementById('hp-bar-value').textContent = `${Math.round(playerHp)}/${playerMaxHp}`;
+            const hpBarFg = document.getElementById('hp-bar-fg');
+            if (hpBarFg) {
+                // 动态血量条动画
+                let percent = Math.max(0, 1 - playerHitCount / PLAYER_MAX_HIT);
+                hpBarFg.style.transition = 'width 0.3s cubic-bezier(.4,1.6,.6,1)';
+                hpBarFg.style.width = (percent * 100) + '%';
+                document.getElementById('hp-bar-value').textContent = `${Math.round(percent*100)}/100`;
+            }
+
+            // 移除地图头顶血量条，只保留左侧面板
+            // 优化左侧面板血量条，复用DOM，防止文字溢出
+            let playerListPanel = document.getElementById('player-list-panel');
+            if (!playerListPanel) {
+                playerListPanel = document.createElement('div');
+                playerListPanel.id = 'player-list-panel';
+                playerListPanel.style.display = 'flex';
+                playerListPanel.style.flexDirection = 'column';
+                playerListPanel.style.alignItems = 'flex-start';
+                playerListPanel.style.width = '100%';
+                playerListPanel.style.marginTop = '18px';
+                document.getElementById('player-panel').appendChild(playerListPanel);
+            }
+            // 复用血量条DOM
+            let allPlayers = [{
+                name: playerName,
+                hit: playerHitCount,
+                maxHit: PLAYER_MAX_HIT,
+                alive: playerAlive,
+                isPlayer: true
+            }];
+            for (let i = 0; i < aiTanks.length; i++) {
+                allPlayers.push({
+                    name: `AI${i+1}`,
+                    hit: aiTanks[i].hitCount || 0,
+                    maxHit: AI_MAX_HIT,
+                    alive: aiAlive[i],
+                    isPlayer: false
+                });
+            }
+            // 保证数量一致
+            while (playerListPanel.children.length < allPlayers.length) {
+                let wrap = document.createElement('div');
+                wrap.className = 'player-bar-wrap';
+                wrap.style.display = 'flex';
+                wrap.style.alignItems = 'center';
+                wrap.style.marginBottom = '8px';
+                wrap.innerHTML = `
+                    <span class="player-bar-label" style="min-width:38px;max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;"></span>
+                    <div class="player-bar-bar" style="width:48px;height:8px;background:#2a2a2a;border-radius:4px;border:1px solid #aa2222;overflow:hidden;margin-right:4px;flex-shrink:0;">
+                        <div class="player-bar-fg" style="height:100%;background:linear-gradient(90deg,#22dd22 60%,#66ff66 100%);width:100%;transition:width 0.3s;"></div>
+                    </div>
+                    <span class="player-bar-num" style="font-size:11px;color:#fff;font-weight:bold;text-shadow:0 1px 2px #222,0 0 2px #fff8;min-width:36px;max-width:40px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;"></span>
+                `;
+                playerListPanel.appendChild(wrap);
+            }
+            while (playerListPanel.children.length > allPlayers.length) {
+                playerListPanel.removeChild(playerListPanel.lastChild);
+            }
+            for (let i = 0; i < allPlayers.length; i++) {
+                let p = allPlayers[i];
+                let wrap = playerListPanel.children[i];
+                let label = wrap.querySelector('.player-bar-label');
+                let fg = wrap.querySelector('.player-bar-fg');
+                let num = wrap.querySelector('.player-bar-num');
+                label.textContent = p.name;
+                label.style.color = p.isPlayer ? '#fff' : '#aaf';
+                fg.style.width = `${Math.max(0, (1-p.hit/p.maxHit)*100)}%`;
+                num.textContent = `${Math.max(0,Math.round((1-p.hit/p.maxHit)*100))}/100`;
+                wrap.style.opacity = p.alive ? '1' : '0.3';
+            }
 
             // 黑夜遮罩绘制
             if (nightMode && nightMaskGraphics) {
@@ -684,6 +1333,152 @@
             if (flashlightActive && Date.now() - flashlightTimer > FLASHLIGHT_DURATION) {
                 flashlightActive = false;
             }
+
+            // 道具检测（玩家）
+            for (let i = itemList.length - 1; i >= 0; i--) {
+                let item = itemList[i];
+                let dx = tankX - item.x;
+                let dy = tankY - item.y;
+                if (dx * dx + dy * dy < (TILE_SIZE * 0.5) * (TILE_SIZE * 0.5)) {
+                    const type = item.getData('type');
+                    if (type === 'heal') {
+                        playerHitCount = Math.max(0, playerHitCount - HEAL_AMOUNT);
+                        playerHealTime = Date.now();
+                    } else if (type === 'invincible') {
+                        playerInvincible = true;
+                        playerInvincibleTime = Date.now();
+                    }
+                    if (item.icon) { item.icon.remove(); item.icon = null; }
+                    item.destroy();
+                    itemList.splice(i, 1);
+                }
+            }
+            // 玩家无敌包计时
+            if (playerInvincible && playerInvincibleTime && Date.now() - playerInvincibleTime > INVINCIBLE_DURATION) {
+                playerInvincible = false;
+            }
+            // 道具检测（AI）
+            for (let k = 0; k < aiTanks.length; k++) {
+                if (!aiAlive[k]) continue;
+                let ai = aiTanks[k];
+                for (let i = itemList.length - 1; i >= 0; i--) {
+                    let item = itemList[i];
+                    let dx = ai.x - item.x;
+                    let dy = ai.y - item.y;
+                    if (dx * dx + dy * dy < (TILE_SIZE * 0.5) * (TILE_SIZE * 0.5)) {
+                        const type = item.getData('type');
+                        if (type === 'heal') {
+                            ai.hitCount = Math.max(0, ai.hitCount - HEAL_AMOUNT);
+                            aiHealTime[k] = Date.now();
+                        } else if (type === 'invincible') {
+                            ai.invincible = true;
+                            aiInvincibleTime[k] = Date.now();
+                        }
+                        if (item.icon) { item.icon.remove(); item.icon = null; }
+                        item.destroy();
+                        itemList.splice(i, 1);
+                    }
+                }
+                // AI无敌包计时
+                if (ai.invincible && aiInvincibleTime[k] && Date.now() - aiInvincibleTime[k] > INVINCIBLE_DURATION) {
+                    ai.invincible = false;
+                }
+            }
+
+            // 玩家被子弹击中检测
+            if (!playerInvincible && playerAlive) {
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    const b = bullets[i];
+                    // 只检测AI子弹，且不是玩家自己发射的
+                    if (!b.fromAI || b.shooter === 'player') continue;
+                    let dx = tankX - b.sprite.x;
+                    let dy = tankY - b.sprite.y;
+                    let r = TILE_SIZE * 0.8 / 2 + BULLET_RADIUS;
+                    if (dx * dx + dy * dy < r * r) {
+                        playerHitCount++;
+                        playerInvincible = true;
+                        playerInvincibleTimer = Date.now();
+                        b.sprite.destroy();
+                        bullets.splice(i, 1);
+                        // 红晕闪烁
+                        redFlashTimer = Date.now();
+                        break;
+                    }
+                }
+            } else if (playerInvincible) {
+                if (Date.now() - playerInvincibleTimer > PLAYER_INVINCIBLE_TIME) {
+                    playerInvincible = false;
+                }
+            }
+            // 玩家死亡检测
+            if (playerHitCount >= PLAYER_MAX_HIT && playerAlive) {
+                playerAlive = false;
+                // 爆炸特效
+                let boom = game.scene.scenes[0].add.circle(tankX, tankY, TILE_SIZE * 0.8, 0xffcc00, 0.7).setDepth(9999);
+                boom.setStrokeStyle(8, 0xff3300, 0.8);
+                game.scene.scenes[0].tweens.add({
+                    targets: boom,
+                    scale: 2,
+                    alpha: 0,
+                    duration: 400,
+                    onComplete: () => boom.destroy()
+                });
+                // 粒子闪光
+                showDeathParticles(tankX, tankY);
+                // 玩家坦克自动消失
+                if (tank && tank.destroy) tank.destroy();
+            }
+            // AI被玩家子弹击中检测
+            for (let i = 0; i < aiTanks.length; i++) {
+                if (!aiAlive[i]) continue;
+                let ai = aiTanks[i];
+                // AI无敌计时
+                if (ai.invincible && Date.now() - ai.invincibleTimer > AI_INVINCIBLE_TIME) {
+                    ai.invincible = false;
+                }
+                if (!ai.invincible) {
+                    for (let j = bullets.length - 1; j >= 0; j--) {
+                        const b = bullets[j];
+                        // 只跳过自己发射的子弹，其他都能命中
+                        if (b.shooter === i) continue;
+                        let dx = ai.x - b.sprite.x;
+                        let dy = ai.y - b.sprite.y;
+                        let r = TILE_SIZE * 0.8 / 2 + BULLET_RADIUS;
+                        if (dx * dx + dy * dy < r * r) {
+                            ai.hitCount = (ai.hitCount || 0) + 1;
+                            ai.invincible = true;
+                            ai.invincibleTimer = Date.now();
+                            b.sprite.destroy();
+                            bullets.splice(j, 1);
+                            // 爆炸特效（只有死亡时）
+                            if (ai.hitCount >= AI_MAX_HIT) {
+                                aiAlive[i] = false;
+                                let boom = ai.scene.add.circle(ai.x, ai.y, TILE_SIZE * 0.8, 0xffcc00, 0.7).setDepth(9999);
+                                boom.setStrokeStyle(8, 0xff3300, 0.8);
+                                ai.scene.tweens.add({
+                                    targets: boom,
+                                    scale: 2,
+                                    alpha: 0,
+                                    duration: 400,
+                                    onComplete: () => boom.destroy()
+                                });
+                                // AI坦克自动消失
+                                if (ai && ai.destroy) ai.destroy();
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            // 判断胜利
+            let aliveCount = (playerAlive ? 1 : 0) + aiAlive.filter(x=>x).length;
+            if (aliveCount === 1 && !winnerShown) {
+                winnerShown = true;
+                setTimeout(() => {
+                    let winner = playerAlive ? playerName : getAIWinnerName();
+                    showWinnerModal(winner);
+                }, 200);
+            }
         }
 
         // 设置窗口逻辑
@@ -712,6 +1507,7 @@
             document.getElementById('glow-color-input').value = phaserColorToHex(glowColor);
             document.getElementById('antialias-select').value = (localStorage.getItem('antialias') || 'on');
             document.getElementById('night-mode-input').checked = nightMode;
+            // 移除设置窗口AI数量相关逻辑
         }
         function closeSettings() {
             document.getElementById('settings-modal').style.display = 'none';
@@ -755,22 +1551,439 @@
                 (localStorage.getItem('antialias') || 'on') === 'on'
             );
         };
-        // 打开设置时同步黑夜模式开关
-        const oldOpenSettings = openSettings;
-        openSettings = function() {
-            oldOpenSettings();
-            document.getElementById('night-mode-input').checked = nightMode;
+        // 移除设置窗口AI数量相关逻辑
+        // 游戏开始界面逻辑
+        function showStartModal() {
+            document.getElementById('start-modal').style.display = 'flex';
+        }
+        function hideStartModal() {
+            document.getElementById('start-modal').style.display = 'none';
+        }
+        document.getElementById('start-btn').onclick = async function() {
+            aiCount = Math.max(0, Math.min(3, parseInt(document.getElementById('start-ai-count').value)||0));
+            hideStartModal();
+            gameStarted = true;
+            await createGame(
+                (localStorage.getItem('antialias') || 'on') === 'off',
+                (localStorage.getItem('antialias') || 'on') === 'on'
+            );
         };
+        // 重新开始时回到开始界面
+        window.showStartModal = showStartModal;
+        // 修改胜利弹窗按钮逻辑
+        window.showWinnerModal = function(name) {
+            if (document.getElementById('winner-modal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'winner-modal';
+            modal.style.position = 'fixed';
+            modal.style.left = '0';
+            modal.style.top = '0';
+            modal.style.right = '0';
+            modal.style.bottom = '0';
+            modal.style.background = 'radial-gradient(ellipse at center, #181c2a 60%, #10121a 100%)';
+            modal.style.zIndex = '10001';
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.overflow = 'hidden';
+            modal.innerHTML = `
+                <div id="winner-panel" style="background:linear-gradient(135deg,#23243a 60%,#23243a 100%);border-radius:22px;box-shadow:0 8px 32px #111b,0 0 0 2px #3338;padding:48px 48px 32px 48px;min-width:360px;min-height:220px;display:flex;flex-direction:column;align-items:center;gap:18px;animation:popIn 0.7s cubic-bezier(.4,1.6,.6,1);border:1.5px solid #3af;box-shadow:0 0 40px #3af8,0 0 0 2px #3338;position:relative;">
+                    <div class="start-title" style="font-size:32px;">胜利者</div>
+                    <div class="winner-trophy" style="font-size:64px;color:gold;text-shadow:0 2px 12px #ff0a,0 0 8px #fff8;">🏆</div>
+                    <div class="winner-name" style="font-size:28px;font-weight:bold;color:#fff;margin-bottom:8px;text-shadow:0 2px 8px #222a;">${name}</div>
+                    <button class="winner-btn" style="background:linear-gradient(90deg,#4a6cff 60%,#6cf 100%);color:#fff;border:none;border-radius:8px;font-size:18px;font-weight:bold;padding:10px 36px;cursor:pointer;box-shadow:0 2px 8px #2224;transition:background 0.2s;margin-top:12px;" onclick="document.getElementById('winner-modal').remove();showStartModal();">再来一局</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        };
+        // 初始显示开始界面
+        showStartModal();
         // 读取抗锯齿设置
         let antialiasSetting = localStorage.getItem('antialias') || 'on';
         createGame(antialiasSetting === 'off', antialiasSetting === 'on');
-        window.addEventListener("resize", () => {
-            createGame();
-        });
     </script>
     <script>
     // 禁用右键菜单，防止右键影响游戏体验
     window.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    </script>
+    <script>
+    // 红晕闪烁效果
+    let flashLayer = document.getElementById('red-flash-layer');
+    if (!flashLayer) {
+        flashLayer = document.createElement('div');
+        flashLayer.id = 'red-flash-layer';
+        flashLayer.style.position = 'fixed';
+        flashLayer.style.left = '0';
+        flashLayer.style.top = '0';
+        flashLayer.style.width = '100vw';
+        flashLayer.style.height = '100vh';
+        flashLayer.style.pointerEvents = 'none';
+        flashLayer.style.zIndex = '9999';
+        flashLayer.style.transition = 'opacity 0.2s';
+        document.body.appendChild(flashLayer);
+    }
+    if (Date.now() - redFlashTimer < 300) {
+        flashLayer.style.opacity = '0.55';
+        flashLayer.style.background = 'radial-gradient(ellipse at center, rgba(255,0,0,0.12) 40%, rgba(255,0,0,0.35) 100%)';
+    } else {
+        flashLayer.style.opacity = '0';
+    }
+    </script>
+    <style>
+    #winner-modal {
+        position: fixed;
+        left: 0; top: 0; right: 0; bottom: 0;
+        background: rgba(30,30,40,0.55);
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    #winner-panel {
+        background: linear-gradient(135deg, #23243a 60%, #3a3a5a 100%);
+        border-radius: 22px;
+        box-shadow: 0 8px 32px #111b, 0 0 0 2px #3338;
+        padding: 48px 48px 32px 48px;
+        min-width: 340px;
+        min-height: 220px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        animation: winner-pop 0.5s cubic-bezier(.4,1.6,.6,1);
+    }
+    @keyframes winner-pop {
+        0% { transform: scale(0.7); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .winner-trophy {
+        font-size: 64px;
+        margin-bottom: 8px;
+        color: gold;
+        text-shadow: 0 2px 12px #ff0a, 0 0 8px #fff8;
+    }
+    .winner-name {
+        font-size: 28px;
+        font-weight: bold;
+        color: #fff;
+        margin-bottom: 8px;
+        text-shadow: 0 2px 8px #222a;
+    }
+    .winner-btn {
+        background: linear-gradient(90deg, #4a6cff 60%, #6cf 100%);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 18px;
+        font-weight: bold;
+        padding: 10px 36px;
+        cursor: pointer;
+        box-shadow: 0 2px 8px #2224;
+        transition: background 0.2s;
+        margin-top: 12px;
+    }
+    .winner-btn:hover {
+        background: linear-gradient(90deg, #6cf 60%, #4a6cff 100%);
+    }
+    </style>
+    <script>
+    function showWinnerModal(name) {
+        if (document.getElementById('winner-modal')) return;
+        const modal = document.createElement('div');
+        modal.id = 'winner-modal';
+        modal.innerHTML = `
+            <div id="winner-panel">
+                <div class="winner-trophy">🏆</div>
+                <div class="winner-name">${name}</div>
+                <button class="winner-btn" onclick="window.location.reload()">再来一局</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    function getAIWinnerName() {
+        // 只返回第一个存活AI的名字
+        for (let i = 0; i < aiTanks.length; i++) {
+            if (aiAlive[i]) return `AI${i+1}`;
+        }
+        return 'AI';
+    }
+    </script>
+    <script>
+    // ESC设置时暂停/恢复
+    let gamePaused = false;
+    const oldOpenSettings3 = openSettings;
+    openSettings = function() {
+        gamePaused = true;
+        oldOpenSettings3();
+    };
+    const oldCloseSettings = closeSettings;
+    closeSettings = function() {
+        gamePaused = false;
+        oldCloseSettings();
+        // 如果还在开始界面，什么都不做
+        if (document.getElementById('start-modal').style.display === 'flex') return;
+    };
+
+    // 所有玩家头顶血量条
+    let hpBarLayer = document.getElementById('tank-hp-bar-layer');
+    if (!hpBarLayer) {
+        hpBarLayer = document.createElement('div');
+        hpBarLayer.id = 'tank-hp-bar-layer';
+        hpBarLayer.style.position = 'fixed';
+        hpBarLayer.style.left = '0';
+        hpBarLayer.style.top = '0';
+        hpBarLayer.style.width = '100vw';
+        hpBarLayer.style.height = '100vh';
+        hpBarLayer.style.pointerEvents = 'none';
+        hpBarLayer.style.zIndex = '10000';
+        document.body.appendChild(hpBarLayer);
+    }
+    function showTankHpBar(x, y, hit, maxHit, name, alive) {
+        // 坦克世界坐标转屏幕坐标
+        const canvas = game.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const scale = scaleInfo.scale;
+        const sx = rect.left + x * scale;
+        const sy = rect.top + y * scale;
+        let id = `tank-hp-bar-${name}`;
+        let bar = document.getElementById(id);
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.id = id;
+            bar.style.position = 'absolute';
+            bar.style.width = '60px';
+            bar.style.height = '10px';
+            bar.style.background = '#2a2a2a';
+            bar.style.borderRadius = '5px';
+            bar.style.border = '1.5px solid #aa2222';
+            bar.style.boxShadow = '0 0 4px #aa222288';
+            bar.style.pointerEvents = 'none';
+            bar.style.transition = 'opacity 0.2s';
+            bar.innerHTML = `<div style="position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,#22dd22 60%,#66ff66 100%);border-radius:5px;transition:width 0.3s;z-index:1;" id="${id}-fg"></div><div style="position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#fff;text-shadow:0 1px 2px #222,0 0 2px #fff8;z-index:2;">${name} ${Math.max(0,Math.round((1-hit/maxHit)*100))}/100</div>`;
+            hpBarLayer.appendChild(bar);
+        }
+        bar.style.left = (sx - 30) + 'px';
+        bar.style.top = (sy - 38) + 'px';
+        bar.style.opacity = alive ? '1' : '0.2';
+        let fg = document.getElementById(`${id}-fg`);
+        if (fg) fg.style.width = `${Math.max(0, (1-hit/maxHit)*100)}%`;
+        bar.children[1].textContent = `${name} ${Math.max(0,Math.round((1-hit/maxHit)*100))}/100`;
+    }
+
+    // 玩家死亡/AI死亡爆炸粒子特效
+    function showDeathParticles(x, y) {
+        const canvas = game.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const scale = scaleInfo.scale;
+        const sx = rect.left + x * scale;
+        const sy = rect.top + y * scale;
+        for (let i = 0; i < 18; i++) {
+            let p = document.createElement('div');
+            p.style.position = 'absolute';
+            p.style.left = sx + 'px';
+            p.style.top = sy + 'px';
+            p.style.width = '8px';
+            p.style.height = '8px';
+            p.style.borderRadius = '50%';
+            p.style.background = `hsl(${Math.random()*40+30},100%,60%)`;
+            p.style.zIndex = '10001';
+            p.style.pointerEvents = 'none';
+            let angle = Math.random() * Math.PI * 2;
+            let dist = Math.random() * 60 + 30;
+            let dx = Math.cos(angle) * dist;
+            let dy = Math.sin(angle) * dist;
+            p.style.transition = 'all 0.7s cubic-bezier(.4,1.6,.6,1)';
+            document.body.appendChild(p);
+            setTimeout(() => {
+                p.style.left = (sx + dx) + 'px';
+                p.style.top = (sy + dy) + 'px';
+                p.style.opacity = '0';
+            }, 10);
+            setTimeout(() => p.remove(), 800);
+        }
+    }
+    </script>
+    <script>
+    window.addEventListener('resize', safeUpdateMapWrapperCenter);
+    setInterval(safeUpdateMapWrapperCenter, 200); // 动态监听面板宽度变化
+    setTimeout(safeUpdateMapWrapperCenter, 500);
+    </script>
+    <script>
+    // 开始界面动画背景
+    function startBgTankAnim() {
+        const canvas = document.getElementById('start-bg-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        let t = 0;
+        function drawTank(x, y, angle, color) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            // 机身
+            ctx.fillStyle = color;
+            ctx.shadowColor = '#3af';
+            ctx.shadowBlur = 16;
+            ctx.fillRect(-18, -18, 36, 36);
+            ctx.shadowBlur = 0;
+            // 炮管
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-4, -36, 8, 28);
+            ctx.restore();
+        }
+        function drawEnemy(x, y, angle) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.fillStyle = '#444';
+            ctx.fillRect(-16, -16, 32, 32);
+            ctx.fillStyle = '#aaf';
+            ctx.fillRect(-3, -28, 6, 20);
+            ctx.restore();
+        }
+        function loop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 星星
+            for (let i = 0; i < 80; i++) {
+                let sx = (i * 97 + t * 0.2 * (i%3+1)) % canvas.width;
+                let sy = (i * 53 + t * 0.13 * (i%5+1)) % canvas.height;
+                ctx.fillStyle = '#fff';
+                ctx.globalAlpha = 0.2 + 0.8 * ((i%7)/7);
+                ctx.beginPath(); ctx.arc(sx, sy, 1.2 + (i%3), 0, Math.PI*2); ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            // 坦克主角
+            let tx = canvas.width/2 + Math.sin(t/80)*180;
+            let ty = canvas.height/2 + Math.cos(t/120)*120;
+            let tankAngle = Math.sin(t/100)*0.5;
+            drawTank(tx, ty, tankAngle, '#3af');
+            // 敌方坦克
+            for (let i = 0; i < 3; i++) {
+                let ex = canvas.width/2 + Math.sin(t/60+i*2)*320;
+                let ey = canvas.height/2 + Math.cos(t/80+i*2)*200;
+                let eAngle = Math.atan2(ty-ey, tx-ex);
+                drawEnemy(ex, ey, eAngle);
+                // 子弹
+                ctx.save();
+                ctx.strokeStyle = '#ff0';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(ex + Math.cos(eAngle)*20, ey + Math.sin(eAngle)*20);
+                ctx.lineTo(ex + Math.cos(eAngle)*60, ey + Math.sin(eAngle)*60);
+                ctx.stroke();
+                ctx.restore();
+            }
+            // 主角子弹
+            ctx.save();
+            ctx.strokeStyle = '#0f0';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(tx, ty-36);
+            ctx.lineTo(tx, ty-120);
+            ctx.stroke();
+            ctx.restore();
+            t++;
+            requestAnimationFrame(loop);
+        }
+        loop();
+    }
+    startBgTankAnim();
+    // 开始界面按钮逻辑
+    document.getElementById('start-settings-btn').onclick = function() {
+        openSettings();
+    };
+    document.getElementById('start-maker-btn').onclick = function() {
+        document.getElementById('maker-modal').style.display = 'flex';
+    };
+    </script>
+    <script>
+    // 游戏主界面点击背景触发小球炸开特效
+    document.querySelector('.map-wrapper').addEventListener('click', function(e) {
+        // 只在游戏已开始时生效
+        if (!gameStarted) return;
+        const rect = this.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        for (let i = 0; i < 18; i++) {
+            let p = document.createElement('div');
+            p.style.position = 'absolute';
+            p.style.left = (rect.left + x) + 'px';
+            p.style.top = (rect.top + y) + 'px';
+            p.style.width = '10px';
+            p.style.height = '10px';
+            p.style.borderRadius = '50%';
+            p.style.background = `hsl(${Math.random()*360},100%,60%)`;
+            p.style.zIndex = '10009';
+            p.style.pointerEvents = 'none';
+            let angle = Math.random() * Math.PI * 2;
+            let dist = Math.random() * 60 + 30;
+            let dx = Math.cos(angle) * dist;
+            let dy = Math.sin(angle) * dist;
+            p.style.transition = 'all 0.7s cubic-bezier(.4,1.6,.6,1)';
+            document.body.appendChild(p);
+            setTimeout(() => {
+                p.style.left = (rect.left + x + dx) + 'px';
+                p.style.top = (rect.top + y + dy) + 'px';
+                p.style.opacity = '0';
+            }, 10);
+            setTimeout(() => p.remove(), 800);
+        }
+    });
+    // 自定义鼠标样式跟随
+    const cursor = document.getElementById('custom-cursor');
+    document.addEventListener('mousemove', function(e) {
+        cursor.style.left = (e.clientX - 16) + 'px';
+        cursor.style.top = (e.clientY - 16) + 'px';
+    });
+    </script>
+    <script>
+    // 设置界面增加回到游戏UI界面按钮，移除AI数量设置项，设置自动保存
+    // 自动保存设置
+    function saveUserSettings() {
+        localStorage.setItem('playerName', playerName);
+        localStorage.setItem('tankColor', tankColor);
+        localStorage.setItem('bulletColor', BULLET_COLOR);
+        localStorage.setItem('glowColor', glowColor);
+    }
+    function loadUserSettings() {
+        if (localStorage.getItem('playerName')) playerName = localStorage.getItem('playerName');
+        if (localStorage.getItem('tankColor')) tankColor = parseInt(localStorage.getItem('tankColor'));
+        if (localStorage.getItem('bulletColor')) BULLET_COLOR = parseInt(localStorage.getItem('bulletColor'));
+        if (localStorage.getItem('glowColor')) glowColor = parseInt(localStorage.getItem('glowColor'));
+    }
+    loadUserSettings();
+    // 设置界面回到游戏UI按钮
+    let settingsPanel = document.getElementById('settings-panel');
+    if (settingsPanel && !document.getElementById('back-to-start-btn')) {
+        let backBtn = document.createElement('button');
+        backBtn.id = 'back-to-start-btn';
+        backBtn.textContent = '回到游戏UI界面';
+        backBtn.style.marginTop = '12px';
+        backBtn.style.background = 'linear-gradient(90deg, #4a6cff 60%, #6cf 100%)';
+        backBtn.style.color = '#fff';
+        backBtn.style.border = 'none';
+        backBtn.style.borderRadius = '8px';
+        backBtn.style.fontSize = '16px';
+        backBtn.style.fontWeight = 'bold';
+        backBtn.style.padding = '8px 28px';
+        backBtn.style.cursor = 'pointer';
+        backBtn.style.boxShadow = '0 2px 8px #2224';
+        backBtn.onclick = function() {
+            closeSettings();
+            showStartModal();
+        };
+        settingsPanel.appendChild(backBtn);
+    }
+    // 设置项变更时自动保存
+    document.getElementById('name-input').oninput = function() { playerName = this.value; saveUserSettings(); };
+    document.getElementById('tank-color-input').oninput = function() { tankColor = hexToPhaserColor(this.value); if (tank && tank.list && tank.list[0]) tank.list[0].fillColor = tankColor; saveUserSettings(); };
+    document.getElementById('bullet-color-input').oninput = function() { BULLET_COLOR = hexToPhaserColor(this.value); saveUserSettings(); };
+    document.getElementById('glow-color-input').oninput = function() { glowColor = hexToPhaserColor(this.value); if (tank && tank.list && tank.list[0]) tank.list[0].setStrokeStyle(6, glowColor, 0.7); if (tank && tank.list && tank.list[1]) tank.list[1].setStrokeStyle(4, glowColor, 0.6); saveUserSettings(); };
     </script>
 </body>
 </html> 
