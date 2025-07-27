@@ -1,0 +1,6 @@
+D:\app\projects\tools\screen\obj\Debug\net6.0\ScreenRecorder.csproj.AssemblyReference.cache
+D:\app\projects\tools\screen\obj\Debug\net6.0\ScreenRecorder.GeneratedMSBuildEditorConfig.editorconfig
+D:\app\projects\tools\screen\obj\Debug\net6.0\ScreenRecorder.AssemblyInfoInputs.cache
+D:\app\projects\tools\screen\obj\Debug\net6.0\ScreenRecorder.AssemblyInfo.cs
+D:\app\projects\tools\screen\obj\Debug\net6.0\ScreenRecorder.csproj.CoreCompileInputs.cache
+D:\app\projects\tools\screen\obj\Debug\net6.0\ScreenRecorder.sourcelink.json
