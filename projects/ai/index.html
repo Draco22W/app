@@ -806,6 +806,7 @@
                 <button id="importButton" class="control-button">导入对话</button>
                 <button id="statsButton" class="control-button">统计信息</button>
                 <button id="mockModeButton" class="control-button">模拟模式</button>
+                <button id="diagnosticsButton" class="control-button">系统诊断</button>
                 <button id="helpButton" class="control-button">快捷键</button>
             </div>
         </div>
@@ -825,6 +826,7 @@
         const importButton = document.getElementById('importButton');
         const statsButton = document.getElementById('statsButton');
         const mockModeButton = document.getElementById('mockModeButton');
+        const diagnosticsButton = document.getElementById('diagnosticsButton');
         const helpButton = document.getElementById('helpButton');
         const importFileInput = document.getElementById('importFileInput');
         const loadingIndicator = document.getElementById('loadingIndicator');
@@ -1680,6 +1682,366 @@
             }
         }
 
+        // 全局错误处理管理器
+        class ErrorHandler {
+            constructor() {
+                this.errorLog = [];
+                this.maxLogSize = 100;
+                this.setupGlobalErrorHandlers();
+            }
+
+            // 设置全局错误处理器
+            setupGlobalErrorHandlers() {
+                // 捕获未处理的JavaScript错误
+                window.addEventListener('error', (event) => {
+                    this.handleGlobalError({
+                        type: 'javascript',
+                        message: event.message,
+                        filename: event.filename,
+                        lineno: event.lineno,
+                        colno: event.colno,
+                        error: event.error,
+                        timestamp: new Date()
+                    });
+                });
+
+                // 捕获未处理的Promise拒绝
+                window.addEventListener('unhandledrejection', (event) => {
+                    this.handleGlobalError({
+                        type: 'promise',
+                        message: event.reason?.message || 'Unhandled Promise Rejection',
+                        reason: event.reason,
+                        timestamp: new Date()
+                    });
+                });
+
+                // 捕获资源加载错误
+                window.addEventListener('error', (event) => {
+                    if (event.target !== window) {
+                        this.handleGlobalError({
+                            type: 'resource',
+                            message: `Failed to load resource: ${event.target.src || event.target.href}`,
+                            element: event.target.tagName,
+                            timestamp: new Date()
+                        });
+                    }
+                }, true);
+            }
+
+            // 处理全局错误
+            handleGlobalError(errorInfo) {
+                console.error('Global error caught:', errorInfo);
+                this.logError(errorInfo);
+
+                // 根据错误类型显示用户友好的提示
+                if (errorInfo.type === 'javascript') {
+                    this.showUserFriendlyError('应用程序遇到了一个错误，请刷新页面重试');
+                } else if (errorInfo.type === 'promise') {
+                    this.showUserFriendlyError('操作失败，请重试');
+                } else if (errorInfo.type === 'resource') {
+                    console.warn('Resource loading failed:', errorInfo.message);
+                }
+            }
+
+            // 记录错误
+            logError(errorInfo) {
+                this.errorLog.push(errorInfo);
+                
+                // 限制日志大小
+                if (this.errorLog.length > this.maxLogSize) {
+                    this.errorLog.shift();
+                }
+
+                // 在开发模式下输出详细错误信息
+                if (this.isDevelopmentMode()) {
+                    console.group('🐛 Error Details');
+                    console.error('Type:', errorInfo.type);
+                    console.error('Message:', errorInfo.message);
+                    console.error('Timestamp:', errorInfo.timestamp);
+                    if (errorInfo.error) {
+                        console.error('Stack:', errorInfo.error.stack);
+                    }
+                    console.groupEnd();
+                }
+            }
+
+            // 显示用户友好的错误提示
+            showUserFriendlyError(message, options = {}) {
+                const {
+                    type = 'error',
+                    duration = 5000,
+                    showRetry = false,
+                    retryCallback = null
+                } = options;
+
+                // 避免重复显示相同错误
+                if (this.lastErrorMessage === message && Date.now() - this.lastErrorTime < 3000) {
+                    return;
+                }
+
+                this.lastErrorMessage = message;
+                this.lastErrorTime = Date.now();
+
+                if (type === 'error') {
+                    showErrorMessage(message, retryCallback);
+                } else {
+                    showSuccessMessage(message);
+                }
+            }
+
+            // 检查是否为开发模式
+            isDevelopmentMode() {
+                return location.hostname === 'localhost' || 
+                       location.hostname === '127.0.0.1' || 
+                       location.protocol === 'file:';
+            }
+
+            // 获取错误统计
+            getErrorStats() {
+                const stats = {
+                    total: this.errorLog.length,
+                    byType: {},
+                    recent: this.errorLog.slice(-10)
+                };
+
+                this.errorLog.forEach(error => {
+                    stats.byType[error.type] = (stats.byType[error.type] || 0) + 1;
+                });
+
+                return stats;
+            }
+
+            // 清除错误日志
+            clearErrorLog() {
+                this.errorLog = [];
+            }
+
+            // 导出错误日志
+            exportErrorLog() {
+                const exportData = {
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent,
+                    url: location.href,
+                    errors: this.errorLog,
+                    stats: this.getErrorStats()
+                };
+
+                return JSON.stringify(exportData, null, 2);
+            }
+        }
+
+        // 网络状态监控器
+        class NetworkMonitor {
+            constructor() {
+                this.isOnline = navigator.onLine;
+                this.connectionType = this.getConnectionType();
+                this.setupNetworkListeners();
+            }
+
+            setupNetworkListeners() {
+                window.addEventListener('online', () => {
+                    this.isOnline = true;
+                    this.handleNetworkChange('online');
+                });
+
+                window.addEventListener('offline', () => {
+                    this.isOnline = false;
+                    this.handleNetworkChange('offline');
+                });
+
+                // 监听连接类型变化（如果支持）
+                if ('connection' in navigator) {
+                    navigator.connection.addEventListener('change', () => {
+                        this.connectionType = this.getConnectionType();
+                        this.handleNetworkChange('connection-change');
+                    });
+                }
+            }
+
+            getConnectionType() {
+                if ('connection' in navigator) {
+                    return {
+                        effectiveType: navigator.connection.effectiveType,
+                        downlink: navigator.connection.downlink,
+                        rtt: navigator.connection.rtt
+                    };
+                }
+                return null;
+            }
+
+            handleNetworkChange(type) {
+                console.log(`Network status changed: ${type}`, {
+                    isOnline: this.isOnline,
+                    connectionType: this.connectionType
+                });
+
+                if (type === 'online') {
+                    showSuccessMessage('网络连接已恢复');
+                    // 可以在这里重试失败的请求
+                } else if (type === 'offline') {
+                    showErrorMessage('网络连接已断开，请检查网络设置');
+                }
+            }
+
+            getNetworkStatus() {
+                return {
+                    isOnline: this.isOnline,
+                    connectionType: this.connectionType,
+                    timestamp: new Date()
+                };
+            }
+        }
+
+        // 性能监控器
+        class PerformanceMonitor {
+            constructor() {
+                this.metrics = {
+                    pageLoad: null,
+                    apiCalls: [],
+                    renderTimes: [],
+                    memoryUsage: []
+                };
+                this.setupPerformanceMonitoring();
+            }
+
+            setupPerformanceMonitoring() {
+                // 监控页面加载性能
+                window.addEventListener('load', () => {
+                    if ('performance' in window) {
+                        const navigation = performance.getEntriesByType('navigation')[0];
+                        this.metrics.pageLoad = {
+                            domContentLoaded: navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
+                            loadComplete: navigation.loadEventEnd - navigation.loadEventStart,
+                            totalTime: navigation.loadEventEnd - navigation.fetchStart
+                        };
+                    }
+                });
+
+                // 定期收集内存使用情况
+                if ('memory' in performance) {
+                    setInterval(() => {
+                        this.collectMemoryUsage();
+                    }, 30000); // 每30秒收集一次
+                }
+            }
+
+            // 记录API调用性能
+            recordAPICall(url, duration, success) {
+                this.metrics.apiCalls.push({
+                    url,
+                    duration,
+                    success,
+                    timestamp: new Date()
+                });
+
+                // 限制记录数量
+                if (this.metrics.apiCalls.length > 50) {
+                    this.metrics.apiCalls.shift();
+                }
+            }
+
+            // 记录渲染时间
+            recordRenderTime(operation, duration) {
+                this.metrics.renderTimes.push({
+                    operation,
+                    duration,
+                    timestamp: new Date()
+                });
+
+                if (this.metrics.renderTimes.length > 50) {
+                    this.metrics.renderTimes.shift();
+                }
+            }
+
+            // 收集内存使用情况
+            collectMemoryUsage() {
+                if ('memory' in performance) {
+                    this.metrics.memoryUsage.push({
+                        used: performance.memory.usedJSHeapSize,
+                        total: performance.memory.totalJSHeapSize,
+                        limit: performance.memory.jsHeapSizeLimit,
+                        timestamp: new Date()
+                    });
+
+                    if (this.metrics.memoryUsage.length > 20) {
+                        this.metrics.memoryUsage.shift();
+                    }
+                }
+            }
+
+            // 获取性能报告
+            getPerformanceReport() {
+                const apiCallStats = this.getAPICallStats();
+                const renderStats = this.getRenderStats();
+
+                return {
+                    pageLoad: this.metrics.pageLoad,
+                    apiCalls: apiCallStats,
+                    rendering: renderStats,
+                    memory: this.getMemoryStats(),
+                    timestamp: new Date()
+                };
+            }
+
+            getAPICallStats() {
+                if (this.metrics.apiCalls.length === 0) return null;
+
+                const durations = this.metrics.apiCalls.map(call => call.duration);
+                const successRate = this.metrics.apiCalls.filter(call => call.success).length / this.metrics.apiCalls.length;
+
+                return {
+                    total: this.metrics.apiCalls.length,
+                    averageDuration: durations.reduce((a, b) => a + b, 0) / durations.length,
+                    maxDuration: Math.max(...durations),
+                    minDuration: Math.min(...durations),
+                    successRate: successRate * 100
+                };
+            }
+
+            getRenderStats() {
+                if (this.metrics.renderTimes.length === 0) return null;
+
+                const durations = this.metrics.renderTimes.map(render => render.duration);
+
+                return {
+                    total: this.metrics.renderTimes.length,
+                    averageDuration: durations.reduce((a, b) => a + b, 0) / durations.length,
+                    maxDuration: Math.max(...durations),
+                    minDuration: Math.min(...durations)
+                };
+            }
+
+            getMemoryStats() {
+                if (this.metrics.memoryUsage.length === 0) return null;
+
+                const latest = this.metrics.memoryUsage[this.metrics.memoryUsage.length - 1];
+                const usagePercentage = (latest.used / latest.limit) * 100;
+
+                return {
+                    current: {
+                        used: Math.round(latest.used / 1024 / 1024), // MB
+                        total: Math.round(latest.total / 1024 / 1024), // MB
+                        limit: Math.round(latest.limit / 1024 / 1024), // MB
+                        usagePercentage: Math.round(usagePercentage * 100) / 100
+                    },
+                    trend: this.getMemoryTrend()
+                };
+            }
+
+            getMemoryTrend() {
+                if (this.metrics.memoryUsage.length < 2) return 'stable';
+
+                const recent = this.metrics.memoryUsage.slice(-5);
+                const first = recent[0].used;
+                const last = recent[recent.length - 1].used;
+                const change = ((last - first) / first) * 100;
+
+                if (change > 10) return 'increasing';
+                if (change < -10) return 'decreasing';
+                return 'stable';
+            }
+        }
+
         // 自动调整输入框高度
         messageInput.addEventListener('input', function () {
             this.style.height = 'auto';
@@ -1732,6 +2094,12 @@
                 showKeyboardShortcuts();
             }
             
+            // Ctrl+T: 运行端到端测试
+            if (e.ctrlKey && e.key === 't') {
+                e.preventDefault();
+                runE2ETests();
+            }
+            
             // 聚焦到输入框 (当不在输入框时按任意字母键)
             if (!e.ctrlKey && !e.altKey && !e.metaKey && 
                 e.key.length === 1 && e.key.match(/[a-zA-Z0-9\u4e00-\u9fa5]/) &&
@@ -1750,6 +2118,7 @@
         importButton.addEventListener('click', () => importFileInput.click());
         statsButton.addEventListener('click', showStats);
         mockModeButton.addEventListener('click', toggleMockMode);
+        diagnosticsButton.addEventListener('click', showSystemDiagnostics);
         helpButton.addEventListener('click', showKeyboardShortcuts);
         
         // 文件导入处理
@@ -1758,6 +2127,9 @@
         // 全局变量
         let messageManager;
         let apiService;
+        let errorHandler;
+        let networkMonitor;
+        let performanceMonitor;
 
         // 基础功能实现
         async function sendMessage() {
@@ -1765,8 +2137,14 @@
             if (!message) return;
 
             let userMessage = null;
+            const startTime = performance.now();
 
             try {
+                // 检查网络状态
+                if (!networkMonitor.isOnline) {
+                    throw new Error('网络连接不可用，请检查网络设置');
+                }
+
                 // 禁用发送按钮
                 setSendButtonState(false);
                 hideErrorMessage();
@@ -1779,7 +2157,9 @@
                 userMessage = messageManager.addMessage('user', message, 'sending');
 
                 // 渲染用户消息
+                const renderStart = performance.now();
                 renderMessage(userMessage);
+                performanceMonitor.recordRenderTime('user-message', performance.now() - renderStart);
 
                 // 显示加载指示器
                 showLoadingIndicator();
@@ -1788,7 +2168,12 @@
                 const conversationHistory = messageManager.getMessages().filter(msg => msg.id !== userMessage.id);
 
                 // 调用API获取AI回复
+                const apiStart = performance.now();
                 const response = await apiService.sendMessage(message, conversationHistory);
+                const apiDuration = performance.now() - apiStart;
+                
+                // 记录API调用性能
+                performanceMonitor.recordAPICall('qwen-api', apiDuration, true);
 
                 // 更新用户消息状态为已发送
                 messageManager.updateMessageStatus(userMessage.id, 'sent');
@@ -1801,13 +2186,23 @@
                 const assistantMessage = messageManager.addMessage('assistant', response.content);
 
                 // 渲染AI回复
+                const assistantRenderStart = performance.now();
                 renderMessage(assistantMessage);
+                performanceMonitor.recordRenderTime('assistant-message', performance.now() - assistantRenderStart);
 
                 // 滚动到最新消息
                 scrollToBottom();
 
+                // 记录整体操作时间
+                const totalTime = performance.now() - startTime;
+                console.log(`消息发送完成，总耗时: ${Math.round(totalTime)}ms`);
+
             } catch (error) {
                 console.error('发送消息失败:', error);
+
+                // 记录失败的API调用
+                const apiDuration = performance.now() - startTime;
+                performanceMonitor.recordAPICall('qwen-api', apiDuration, false);
 
                 // 隐藏加载指示器
                 hideLoadingIndicator();
@@ -1818,11 +2213,27 @@
                     updateMessageStatus(userMessage.id, 'error');
                 }
 
+                // 根据错误类型显示不同的错误信息
+                let errorMessage = error.message;
+                let showRetry = true;
+
+                if (error.message.includes('网络')) {
+                    errorMessage = '网络连接失败，请检查网络设置后重试';
+                } else if (error.message.includes('API密钥')) {
+                    errorMessage = 'API密钥无效，请检查配置';
+                    showRetry = false;
+                } else if (error.message.includes('频繁')) {
+                    errorMessage = '请求过于频繁，请稍后再试';
+                }
+
                 // 显示错误信息
-                showErrorMessage(error.message, () => {
-                    // 重试回调
-                    messageInput.value = message;
-                    sendMessage();
+                errorHandler.showUserFriendlyError(errorMessage, {
+                    type: 'error',
+                    showRetry: showRetry,
+                    retryCallback: showRetry ? () => {
+                        messageInput.value = message;
+                        sendMessage();
+                    } : null
                 });
 
             } finally {
@@ -2032,6 +2443,449 @@
                 mockModeButton.style.color = '#6b7280';
                 mockModeButton.style.borderColor = '#d1d5db';
             }
+        }
+
+        // 系统诊断功能
+        function showSystemDiagnostics() {
+            const networkStatus = networkMonitor.getNetworkStatus();
+            const performanceReport = performanceMonitor.getPerformanceReport();
+            const errorStats = errorHandler.getErrorStats();
+            const storageInfo = messageManager.getStorageInfo();
+            const apiStatus = apiService.getAPIStatus();
+
+            let diagnosticsMessage = `🔧 系统诊断报告\n\n`;
+
+            // 网络状态
+            diagnosticsMessage += `🌐 网络状态：\n`;
+            diagnosticsMessage += `- 连接状态：${networkStatus.isOnline ? '✅ 在线' : '❌ 离线'}\n`;
+            if (networkStatus.connectionType) {
+                diagnosticsMessage += `- 连接类型：${networkStatus.connectionType.effectiveType}\n`;
+                diagnosticsMessage += `- 下载速度：${networkStatus.connectionType.downlink} Mbps\n`;
+                diagnosticsMessage += `- 延迟：${networkStatus.connectionType.rtt} ms\n`;
+            }
+            diagnosticsMessage += `\n`;
+
+            // API状态
+            diagnosticsMessage += `🤖 API状态：\n`;
+            diagnosticsMessage += `- API密钥：${apiStatus.apiKey}\n`;
+            diagnosticsMessage += `- 模型：${apiStatus.model}\n`;
+            diagnosticsMessage += `- 模拟模式：${apiService.mockMode ? '✅ 启用' : '❌ 禁用'}\n`;
+            diagnosticsMessage += `- 最大重试：${apiStatus.maxRetries} 次\n`;
+            diagnosticsMessage += `\n`;
+
+            // 性能状态
+            if (performanceReport.apiCalls) {
+                diagnosticsMessage += `⚡ API性能：\n`;
+                diagnosticsMessage += `- 调用次数：${performanceReport.apiCalls.total}\n`;
+                diagnosticsMessage += `- 平均响应时间：${Math.round(performanceReport.apiCalls.averageDuration)} ms\n`;
+                diagnosticsMessage += `- 成功率：${Math.round(performanceReport.apiCalls.successRate)}%\n`;
+                diagnosticsMessage += `\n`;
+            }
+
+            // 内存状态
+            if (performanceReport.memory) {
+                diagnosticsMessage += `💾 内存使用：\n`;
+                diagnosticsMessage += `- 当前使用：${performanceReport.memory.current.used} MB\n`;
+                diagnosticsMessage += `- 使用率：${performanceReport.memory.current.usagePercentage}%\n`;
+                diagnosticsMessage += `- 趋势：${performanceReport.memory.trend}\n`;
+                diagnosticsMessage += `\n`;
+            }
+
+            // 存储状态
+            if (storageInfo) {
+                diagnosticsMessage += `💿 本地存储：\n`;
+                diagnosticsMessage += `- 已使用：${(storageInfo.usedSize / 1024).toFixed(2)} KB\n`;
+                diagnosticsMessage += `- 使用率：${storageInfo.usagePercentage}%\n`;
+                diagnosticsMessage += `\n`;
+            }
+
+            // 错误统计
+            diagnosticsMessage += `🐛 错误统计：\n`;
+            diagnosticsMessage += `- 总错误数：${errorStats.total}\n`;
+            if (errorStats.total > 0) {
+                Object.entries(errorStats.byType).forEach(([type, count]) => {
+                    diagnosticsMessage += `- ${type}：${count} 次\n`;
+                });
+            }
+            diagnosticsMessage += `\n`;
+
+            // 浏览器信息
+            diagnosticsMessage += `🌍 浏览器信息：\n`;
+            diagnosticsMessage += `- User Agent：${navigator.userAgent.substring(0, 50)}...\n`;
+            diagnosticsMessage += `- 语言：${navigator.language}\n`;
+            diagnosticsMessage += `- 屏幕分辨率：${screen.width}x${screen.height}\n`;
+            diagnosticsMessage += `- 窗口大小：${window.innerWidth}x${window.innerHeight}\n`;
+
+            // 显示诊断信息
+            const diagnosticsWindow = window.open('', '_blank', 'width=600,height=800,scrollbars=yes');
+            diagnosticsWindow.document.write(`
+                <html>
+                <head>
+                    <title>系统诊断报告</title>
+                    <style>
+                        body { 
+                            font-family: monospace; 
+                            padding: 20px; 
+                            background: #f5f5f5; 
+                            line-height: 1.6;
+                        }
+                        .container {
+                            background: white;
+                            padding: 20px;
+                            border-radius: 8px;
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        }
+                        .export-btn {
+                            background: #10a37f;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            margin-bottom: 20px;
+                        }
+                        pre {
+                            white-space: pre-wrap;
+                            word-wrap: break-word;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <button class="export-btn" onclick="exportDiagnostics()">导出诊断报告</button>
+                        <pre>${diagnosticsMessage}</pre>
+                    </div>
+                    <script>
+                        function exportDiagnostics() {
+                            const blob = new Blob([document.querySelector('pre').textContent], { type: 'text/plain' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = '系统诊断报告_' + new Date().toISOString().split('T')[0] + '.txt';
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        }
+                    </script>
+                </body>
+                </html>
+            `);
+        }
+
+        // 端到端测试套件
+        class E2ETestSuite {
+            constructor() {
+                this.tests = [];
+                this.results = [];
+                this.isRunning = false;
+            }
+
+            // 添加测试用例
+            addTest(name, testFunction, timeout = 10000) {
+                this.tests.push({
+                    name,
+                    testFunction,
+                    timeout
+                });
+            }
+
+            // 运行所有测试
+            async runAllTests() {
+                if (this.isRunning) {
+                    console.warn('测试已在运行中');
+                    return;
+                }
+
+                this.isRunning = true;
+                this.results = [];
+                
+                console.group('🧪 开始端到端测试');
+                
+                for (const test of this.tests) {
+                    await this.runSingleTest(test);
+                }
+
+                this.isRunning = false;
+                this.showTestResults();
+                console.groupEnd();
+            }
+
+            // 运行单个测试
+            async runSingleTest(test) {
+                const startTime = performance.now();
+                
+                try {
+                    console.log(`🔄 运行测试: ${test.name}`);
+                    
+                    // 设置超时
+                    const timeoutPromise = new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error('测试超时')), test.timeout);
+                    });
+
+                    // 运行测试
+                    await Promise.race([
+                        test.testFunction(),
+                        timeoutPromise
+                    ]);
+
+                    const duration = performance.now() - startTime;
+                    this.results.push({
+                        name: test.name,
+                        status: 'passed',
+                        duration: Math.round(duration),
+                        error: null
+                    });
+
+                    console.log(`✅ 测试通过: ${test.name} (${Math.round(duration)}ms)`);
+
+                } catch (error) {
+                    const duration = performance.now() - startTime;
+                    this.results.push({
+                        name: test.name,
+                        status: 'failed',
+                        duration: Math.round(duration),
+                        error: error.message
+                    });
+
+                    console.error(`❌ 测试失败: ${test.name} - ${error.message}`);
+                }
+            }
+
+            // 显示测试结果
+            showTestResults() {
+                const passed = this.results.filter(r => r.status === 'passed').length;
+                const failed = this.results.filter(r => r.status === 'failed').length;
+                const total = this.results.length;
+
+                let resultMessage = `📊 测试结果汇总\n\n`;
+                resultMessage += `总测试数：${total}\n`;
+                resultMessage += `通过：${passed} ✅\n`;
+                resultMessage += `失败：${failed} ❌\n`;
+                resultMessage += `成功率：${Math.round((passed / total) * 100)}%\n\n`;
+
+                resultMessage += `详细结果：\n`;
+                this.results.forEach(result => {
+                    const status = result.status === 'passed' ? '✅' : '❌';
+                    resultMessage += `${status} ${result.name} (${result.duration}ms)\n`;
+                    if (result.error) {
+                        resultMessage += `   错误: ${result.error}\n`;
+                    }
+                });
+
+                // 显示结果窗口
+                const resultWindow = window.open('', '_blank', 'width=600,height=500,scrollbars=yes');
+                resultWindow.document.write(`
+                    <html>
+                    <head>
+                        <title>测试结果</title>
+                        <style>
+                            body { 
+                                font-family: monospace; 
+                                padding: 20px; 
+                                background: #f5f5f5; 
+                                line-height: 1.6;
+                            }
+                            .container {
+                                background: white;
+                                padding: 20px;
+                                border-radius: 8px;
+                                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                            }
+                            .passed { color: #10a37f; }
+                            .failed { color: #dc2626; }
+                            pre { white-space: pre-wrap; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <h2>端到端测试结果</h2>
+                            <pre>${resultMessage}</pre>
+                        </div>
+                    </body>
+                    </html>
+                `);
+            }
+
+            // 初始化测试用例
+            initializeTests() {
+                // 测试1: 页面基本元素加载
+                this.addTest('页面基本元素加载', async () => {
+                    const requiredElements = [
+                        'messagesContainer',
+                        'messageInput', 
+                        'sendButton',
+                        'clearButton'
+                    ];
+
+                    for (const elementId of requiredElements) {
+                        const element = document.getElementById(elementId);
+                        if (!element) {
+                            throw new Error(`必需元素 ${elementId} 未找到`);
+                        }
+                    }
+                });
+
+                // 测试2: 消息管理器功能
+                this.addTest('消息管理器功能', async () => {
+                    if (!messageManager) {
+                        throw new Error('消息管理器未初始化');
+                    }
+
+                    // 测试添加消息
+                    const testMessage = messageManager.addMessage('user', '测试消息');
+                    if (!testMessage || testMessage.content !== '测试消息') {
+                        throw new Error('添加消息失败');
+                    }
+
+                    // 测试获取消息
+                    const messages = messageManager.getMessages();
+                    if (!Array.isArray(messages)) {
+                        throw new Error('获取消息列表失败');
+                    }
+
+                    // 清理测试数据
+                    messageManager.clearMessages();
+                });
+
+                // 测试3: 本地存储功能
+                this.addTest('本地存储功能', async () => {
+                    const testKey = 'test_storage_key';
+                    const testData = { test: 'data', timestamp: Date.now() };
+
+                    try {
+                        // 测试存储
+                        localStorage.setItem(testKey, JSON.stringify(testData));
+                        
+                        // 测试读取
+                        const retrieved = JSON.parse(localStorage.getItem(testKey));
+                        if (retrieved.test !== testData.test) {
+                            throw new Error('本地存储读写不一致');
+                        }
+
+                        // 清理
+                        localStorage.removeItem(testKey);
+                    } catch (error) {
+                        throw new Error(`本地存储测试失败: ${error.message}`);
+                    }
+                });
+
+                // 测试4: API服务初始化
+                this.addTest('API服务初始化', async () => {
+                    if (!apiService) {
+                        throw new Error('API服务未初始化');
+                    }
+
+                    const status = apiService.getAPIStatus();
+                    if (!status.apiKey || status.apiKey === '未配置') {
+                        throw new Error('API密钥未配置');
+                    }
+                });
+
+                // 测试5: 响应式功能
+                this.addTest('响应式功能', async () => {
+                    const originalWidth = window.innerWidth;
+                    
+                    // 模拟窗口大小变化
+                    Object.defineProperty(window, 'innerWidth', {
+                        writable: true,
+                        configurable: true,
+                        value: 480
+                    });
+
+                    // 触发resize事件
+                    window.dispatchEvent(new Event('resize'));
+                    
+                    // 等待处理完成
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    // 检查移动端类名
+                    if (!document.body.classList.contains('mobile')) {
+                        throw new Error('响应式类名未正确应用');
+                    }
+
+                    // 恢复原始宽度
+                    Object.defineProperty(window, 'innerWidth', {
+                        writable: true,
+                        configurable: true,
+                        value: originalWidth
+                    });
+                    
+                    window.dispatchEvent(new Event('resize'));
+                });
+
+                // 测试6: 错误处理系统
+                this.addTest('错误处理系统', async () => {
+                    if (!errorHandler) {
+                        throw new Error('错误处理器未初始化');
+                    }
+
+                    const initialErrorCount = errorHandler.getErrorStats().total;
+                    
+                    // 模拟一个错误
+                    errorHandler.handleGlobalError({
+                        type: 'test',
+                        message: '测试错误',
+                        timestamp: new Date()
+                    });
+
+                    const newErrorCount = errorHandler.getErrorStats().total;
+                    if (newErrorCount <= initialErrorCount) {
+                        throw new Error('错误记录功能异常');
+                    }
+                });
+
+                // 测试7: 键盘快捷键
+                this.addTest('键盘快捷键', async () => {
+                    // 测试Ctrl+/快捷键
+                    const event = new KeyboardEvent('keydown', {
+                        key: '/',
+                        ctrlKey: true,
+                        bubbles: true
+                    });
+
+                    let helpShown = false;
+                    const originalAlert = window.alert;
+                    window.alert = (message) => {
+                        if (message.includes('键盘快捷键')) {
+                            helpShown = true;
+                        }
+                    };
+
+                    document.dispatchEvent(event);
+                    
+                    // 恢复原始alert
+                    window.alert = originalAlert;
+
+                    if (!helpShown) {
+                        throw new Error('快捷键帮助未正确显示');
+                    }
+                });
+
+                // 测试8: 模拟模式切换
+                this.addTest('模拟模式切换', async () => {
+                    const originalMode = apiService.mockMode;
+                    
+                    // 切换模拟模式
+                    toggleMockMode();
+                    
+                    if (apiService.mockMode === originalMode) {
+                        throw new Error('模拟模式切换失败');
+                    }
+
+                    // 恢复原始状态
+                    toggleMockMode();
+                    
+                    if (apiService.mockMode !== originalMode) {
+                        throw new Error('模拟模式恢复失败');
+                    }
+                });
+            }
+        }
+
+        // 运行端到端测试的函数
+        function runE2ETests() {
+            const testSuite = new E2ETestSuite();
+            testSuite.initializeTests();
+            testSuite.runAllTests();
         }
 
         // UI辅助函数
@@ -2459,6 +3313,11 @@
         // 页面加载完成后的初始化
         document.addEventListener('DOMContentLoaded', function () {
             console.log('编程助手聊天机器人已加载');
+
+            // 初始化错误处理和监控系统
+            errorHandler = new ErrorHandler();
+            networkMonitor = new NetworkMonitor();
+            performanceMonitor = new PerformanceMonitor();
 
             // 初始化API服务
             apiService = new APIService(API_KEY);
