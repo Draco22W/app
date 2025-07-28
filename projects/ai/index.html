@@ -2556,7 +2556,7 @@
                         <button class="export-btn" onclick="exportDiagnostics()">导出诊断报告</button>
                         <pre>${diagnosticsMessage}</pre>
                     </div>
-                    <script>
+                    <scr` + `ipt>
                         function exportDiagnostics() {
                             const blob = new Blob([document.querySelector('pre').textContent], { type: 'text/plain' });
                             const url = URL.createObjectURL(blob);
@@ -2566,7 +2566,7 @@
                             a.click();
                             URL.revokeObjectURL(url);
                         }
-                    </script>
+                    </scr` + `ipt>
                 </body>
                 </html>
             `);
