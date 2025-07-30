@@ -3282,44 +3282,54 @@
                 showErrorMessage('应用初始化失败，请刷新页面重试');
             }
         }
-                highlighted = highlighted.replace(rules.tags, '<span class="code-tag">$&</span>');
-                highlighted = highlighted.replace(rules.attributes, ' <span class="code-attribute">$1</span>=');
-            }
-
-            // CSS特殊处理
-            if (language.toLowerCase() === 'css') {
-                highlighted = highlighted.replace(rules.selectors, '<span class="code-selector">$&</span>');
-                highlighted = highlighted.replace(rules.properties, '<span class="code-property">$&</span>');
-            }
-
-            return highlighted;
-        }
-
-        // HTML转义函数
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // 复制代码功能
-        function copyCode(button) {
-            const codeBlock = button.closest('.code-block');
-            const code = codeBlock.querySelector('code').textContent;
-            
-            navigator.clipboard.writeText(code).then(() => {
-                const originalText = button.textContent;
+                textArea.value = code;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
                 button.textContent = '✓';
                 button.style.color = '#10a37f';
-                
                 setTimeout(() => {
-                    button.textContent = originalText;
+                    button.textContent = '📋';
                     button.style.color = '';
                 }, 2000);
-            }).catch(err => {
-                console.error('复制失败:', err);
-                // 降级方案
-                const textArea = document.createElement('textarea');
+            });
+        }
+
+        // 页面加载完成后初始化应用
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        } else {
+            initializeApp();
+        }
+
+        // 页面卸载前保存数据
+        window.addEventListener('beforeunload', () => {
+            if (messageManager) {
+                messageManager.saveConversation();
+            }
+        });
+
+        // 全局错误处理
+        window.addEventListener('error', (event) => {
+            console.error('全局错误:', event.error);
+            if (errorHandler) {
+                errorHandler.handleError(event.error, 'global');
+            }
+        });
+
+        // 未处理的Promise拒绝
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('未处理的Promise拒绝:', event.reason);
+            if (errorHandler) {
+                errorHandler.handleError(event.reason, 'promise');
+            }
+        });
+
+    </script>
+</body>
+</html>
                 textArea.value = code;
                 document.body.appendChild(textArea);
                 textArea.select();
@@ -3999,79 +4009,6 @@
                 showScrollToBottomButton();
             } else {
                 hideScrollToBottomButton();
-            }
-        });
-
-        // 应用初始化
-        async function initializeApp() {
-            try {
-                console.log('🚀 初始化编程助手应用...');
-
-                // 初始化核心服务
-                messageManager = new MessageManager();
-                apiService = new APIService(API_KEY);
-                errorHandler = new ErrorHandler();
-                networkMonitor = new NetworkMonitor();
-                performanceMonitor = new PerformanceMonitor();
-
-                // 设置消息管理器监听器
-                messageManager.addMessageListener((event, data) => {
-                    console.log(`消息事件: ${event}`, data);
-                });
-
-                // 渲染历史消息
-                renderHistoryMessages();
-
-                // 如果没有历史消息，显示欢迎信息
-                if (messageManager.getMessages().length === 0) {
-                    showWelcomeMessage();
-                }
-
-                // 更新模拟模式按钮状态
-                updateMockModeButton();
-
-                // 聚焦到输入框
-                messageInput.focus();
-
-                console.log('✅ 应用初始化完成');
-
-                // 记录应用启动性能
-                performanceMonitor.recordRenderTime('app-initialization', performance.now());
-
-            } catch (error) {
-                console.error('❌ 应用初始化失败:', error);
-                errorHandler.handleError(error, 'initialization');
-                showErrorMessage('应用初始化失败，请刷新页面重试');
-            }
-        }
-
-        // 页面加载完成后初始化应用
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeApp);
-        } else {
-            initializeApp();
-        }
-
-        // 页面卸载前保存数据
-        window.addEventListener('beforeunload', () => {
-            if (messageManager) {
-                messageManager.saveConversation();
-            }
-        });
-
-        // 全局错误处理
-        window.addEventListener('error', (event) => {
-            console.error('全局错误:', event.error);
-            if (errorHandler) {
-                errorHandler.handleError(event.error, 'global');
-            }
-        });
-
-        // 未处理的Promise拒绝
-        window.addEventListener('unhandledrejection', (event) => {
-            console.error('未处理的Promise拒绝:', event.reason);
-            if (errorHandler) {
-                errorHandler.handleError(event.reason, 'promise');
             }
         });
     </script>
