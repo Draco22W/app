@@ -456,6 +456,8 @@
                 <button id="exportButton" class="control-button">导出对话</button>
                 <button id="importButton" class="control-button">导入对话</button>
                 <button id="statsButton" class="control-button">统计信息</button>
+                <button id="cacheButton" class="control-button">缓存管理</button>
+                <button id="proxyModeButton" class="control-button">代理模式</button>
                 <button id="mockModeButton" class="control-button">模拟模式</button>
                 <button id="helpButton" class="control-button">快捷键</button>
             </div>
@@ -478,6 +480,8 @@
         const exportButton = document.getElementById('exportButton');
         const importButton = document.getElementById('importButton');
         const statsButton = document.getElementById('statsButton');
+        const cacheButton = document.getElementById('cacheButton');
+        const proxyModeButton = document.getElementById('proxyModeButton');
         const mockModeButton = document.getElementById('mockModeButton');
         const helpButton = document.getElementById('helpButton');
         const importFileInput = document.getElementById('importFileInput');
@@ -1000,32 +1004,71 @@
                 this.baseURL = API_URL;
                 this.model = 'qwen-turbo';
                 this.mockMode = false;
+                this.proxyMode = false;
+                this.proxyURL = 'http://localhost:3000/api/proxy';
             }
 
             async sendMessage(userMessage, conversationHistory = []) {
                 try {
-                    if (this.mockMode) {
-                        return await this.getMockResponse(userMessage);
+                    // 首先检查缓存
+                    if (cacheManager) {
+                        const cachedResponse = cacheManager.getCache(userMessage);
+                        if (cachedResponse) {
+                            return {
+                                content: cachedResponse + '\n\n💾 *此回复来自缓存*',
+                                finishReason: 'stop',
+                                fromCache: true
+                            };
+                        }
+
+                        // 如果没有完全匹配，尝试查找相似的缓存
+                        const similarResponse = cacheManager.findSimilarCache(userMessage);
+                        if (similarResponse) {
+                            return {
+                                content: similarResponse + '\n\n💾 *此回复来自相似问题的缓存*',
+                                finishReason: 'stop',
+                                fromCache: true
+                            };
+                        }
                     }
 
-                    const messages = this.buildMessageHistory(userMessage, conversationHistory);
-                    const requestBody = {
-                        model: this.model,
-                        input: { messages: messages },
-                        parameters: {
-                            temperature: 0.7,
-                            max_tokens: 2000
-                        }
-                    };
+                    let response;
+                    if (this.mockMode) {
+                        response = await this.getMockResponse(userMessage);
+                    } else {
+                        const messages = this.buildMessageHistory(userMessage, conversationHistory);
+                        const requestBody = {
+                            model: this.model,
+                            input: { messages: messages },
+                            parameters: {
+                                temperature: 0.7,
+                                max_tokens: 2000
+                            }
+                        };
 
-                    const response = await this.makeRequest(requestBody);
-                    return this.parseResponse(response);
+                        const apiResponse = await this.makeRequest(requestBody);
+                        response = this.parseResponse(apiResponse);
+                    }
+
+                    // 将回复存入缓存
+                    if (cacheManager && response.content) {
+                        cacheManager.setCache(userMessage, response.content);
+                    }
+
+                    return response;
                 } catch (error) {
                     console.error('API调用失败:', error);
                     if (error.message.includes('CORS') || error.message.includes('Failed to fetch') || error.message.includes('网络')) {
                         console.log('检测到CORS错误，自动切换到模拟模式');
                         this.mockMode = true;
-                        return await this.getMockResponse(userMessage);
+                        const response = await this.getMockResponse(userMessage);
+                        
+                        // 即使是模拟模式的回复也要缓存
+                        if (cacheManager && response.content) {
+                            cacheManager.setCache(userMessage, response.content);
+                        }
+                        
+                        return response;
                     }
                     throw error;
                 }
@@ -1058,15 +1101,38 @@
             }
 
             async makeRequest(requestBody) {
-                const response = await fetch(this.baseURL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${this.apiKey}`,
-                        'X-DashScope-SSE': 'disable'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
+                let url, options;
+
+                if (this.proxyMode) {
+                    // 使用代理模式
+                    url = this.proxyURL;
+                    options = {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            headers: {
+                                'Authorization': `Bearer ${this.apiKey}`
+                            },
+                            body: requestBody
+                        })
+                    };
+                } else {
+                    // 直接调用API
+                    url = this.baseURL;
+                    options = {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.apiKey}`,
+                            'X-DashScope-SSE': 'disable'
+                        },
+                        body: JSON.stringify(requestBody)
+                    };
+                }
+
+                const response = await fetch(url, options);
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1076,19 +1142,39 @@
             }
 
             parseResponse(response) {
-                if (!response.output || !response.output.choices || response.output.choices.length === 0) {
+                console.log('🔍 API响应数据:', response);
+                
+                // 检查是否是错误响应
+                if (response.error) {
+                    throw new Error(`API错误: ${response.error}`);
+                }
+                
+                if (!response.output) {
+                    console.error('❌ API响应格式无效:', response);
                     throw new Error('API响应格式无效');
                 }
 
-                const choice = response.output.choices[0];
-                if (!choice.message || !choice.message.content) {
-                    throw new Error('API响应内容为空');
+                // 支持新的API响应格式（直接在output中有text字段）
+                if (response.output.text) {
+                    return {
+                        content: response.output.text.trim(),
+                        finishReason: response.output.finish_reason || 'stop'
+                    };
                 }
 
-                return {
-                    content: choice.message.content.trim(),
-                    finishReason: choice.finish_reason
-                };
+                // 支持旧的API响应格式（choices数组格式）
+                if (response.output.choices && response.output.choices.length > 0) {
+                    const choice = response.output.choices[0];
+                    if (choice.message && choice.message.content) {
+                        return {
+                            content: choice.message.content.trim(),
+                            finishReason: choice.finish_reason || 'stop'
+                        };
+                    }
+                }
+
+                console.error('❌ API响应内容为空:', response.output);
+                throw new Error('API响应内容为空');
             }
 
             async getMockResponse(userMessage) {
@@ -1175,6 +1261,29 @@
             toggleMockMode() {
                 this.mockMode = !this.mockMode;
                 return this.mockMode;
+            }
+
+            toggleProxyMode() {
+                this.proxyMode = !this.proxyMode;
+                return this.proxyMode;
+            }
+
+            async testProxyConnection() {
+                try {
+                    const healthUrl = this.proxyURL.replace('/api/proxy', '/health');
+                    const response = await fetch(healthUrl, {
+                        method: 'GET'
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('代理服务器健康检查:', data);
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    console.error('代理服务器连接测试失败:', error);
+                    return false;
+                }
             }
         } 
        // UI渲染函数
@@ -1402,6 +1511,36 @@
             setTimeout(() => {
                 noticeDiv.remove();
             }, 5000);
+        }
+
+        function showProxyModeNotice() {
+            const noticeDiv = document.createElement('div');
+            noticeDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: #3b82f6;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 6px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 1000;
+                font-size: 14px;
+                max-width: 400px;
+                text-align: center;
+            `;
+            noticeDiv.innerHTML = `
+                <div>🚀 代理模式已启用</div>
+                <div style="font-size: 12px; margin-top: 4px;">
+                    全血模式！现在可以使用真实API进行对话了！
+                </div>
+            `;
+            document.body.appendChild(noticeDiv);
+            
+            setTimeout(() => {
+                noticeDiv.remove();
+            }, 5000);
         }     
    // 核心功能函数
         async function sendMessage() {
@@ -1541,14 +1680,154 @@
 
         function showStats() {
             const stats = messageManager.getMessageStats();
+            const cacheStats = cacheManager ? cacheManager.getCacheStats() : null;
             
             let statsMessage = `📊 对话统计信息\n\n`;
             statsMessage += `💬 消息统计：\n`;
             statsMessage += `- 总消息数：${stats.totalMessages}\n`;
             statsMessage += `- 用户消息：${stats.userMessages}\n`;
-            statsMessage += `- AI回复：${stats.assistantMessages}\n`;
+            statsMessage += `- AI回复：${stats.assistantMessages}\n\n`;
+            
+            if (cacheStats) {
+                statsMessage += `💾 缓存统计：\n`;
+                statsMessage += `- 缓存项目：${cacheStats.totalItems}\n`;
+                statsMessage += `- 缓存大小：${cacheStats.totalSize} KB\n`;
+                statsMessage += `- 总访问次数：${cacheStats.totalAccessCount}\n`;
+                if (cacheStats.newestItem) {
+                    statsMessage += `- 最新缓存：${cacheStats.newestItem.question}\n`;
+                }
+            }
             
             alert(statsMessage);
+        }
+
+        function showCacheManager() {
+            const cacheStats = cacheManager.getCacheStats();
+            
+            let cacheMessage = `💾 缓存管理\n\n`;
+            cacheMessage += `📈 缓存统计：\n`;
+            cacheMessage += `- 缓存项目数：${cacheStats.totalItems}\n`;
+            cacheMessage += `- 缓存大小：${cacheStats.totalSize} KB\n`;
+            cacheMessage += `- 总访问次数：${cacheStats.totalAccessCount}\n\n`;
+            
+            if (cacheStats.oldestItem) {
+                cacheMessage += `⏰ 最旧缓存：\n`;
+                cacheMessage += `- 问题：${cacheStats.oldestItem.question}\n`;
+                cacheMessage += `- 时间：${cacheStats.oldestItem.timestamp}\n\n`;
+            }
+            
+            if (cacheStats.newestItem) {
+                cacheMessage += `🆕 最新缓存：\n`;
+                cacheMessage += `- 问题：${cacheStats.newestItem.question}\n`;
+                cacheMessage += `- 时间：${cacheStats.newestItem.timestamp}\n\n`;
+            }
+            
+            cacheMessage += `🔧 操作选项：\n`;
+            cacheMessage += `1. 查看详细信息\n`;
+            cacheMessage += `2. 清空所有缓存\n`;
+            cacheMessage += `3. 取消\n\n`;
+            cacheMessage += `请输入选项编号：`;
+            
+            const choice = prompt(cacheMessage);
+            
+            switch(choice) {
+                case '1':
+                    showDetailedCacheInfo();
+                    break;
+                case '2':
+                    if (confirm('确定要清空所有缓存吗？此操作不可撤销。')) {
+                        cacheManager.clearCache();
+                        showSuccessMessage('缓存已清空');
+                    }
+                    break;
+                case '3':
+                default:
+                    break;
+            }
+        }
+
+        function showDetailedCacheInfo() {
+            const cacheStats = cacheManager.getCacheStats();
+            
+            const detailWindow = window.open('', '_blank', 'width=600,height=500,scrollbars=yes');
+            detailWindow.document.write(`
+                <html>
+                <head>
+                    <title>缓存详细信息</title>
+                    <style>
+                        body { 
+                            font-family: monospace; 
+                            padding: 20px; 
+                            background: #f5f5f5; 
+                            line-height: 1.6;
+                        }
+                        .container {
+                            background: white;
+                            padding: 20px;
+                            border-radius: 8px;
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        }
+                        .stat-item {
+                            margin: 10px 0;
+                            padding: 10px;
+                            background: #f8f9fa;
+                            border-radius: 4px;
+                        }
+                        .clear-btn {
+                            background: #dc3545;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            margin-top: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h2>💾 缓存详细信息</h2>
+                        
+                        <div class="stat-item">
+                            <strong>📊 基本统计</strong><br>
+                            缓存项目数：${cacheStats.totalItems}<br>
+                            缓存大小：${cacheStats.totalSize} KB<br>
+                            总访问次数：${cacheStats.totalAccessCount}
+                        </div>
+                        
+                        ${cacheStats.oldestItem ? `
+                        <div class="stat-item">
+                            <strong>⏰ 最旧缓存</strong><br>
+                            问题：${cacheStats.oldestItem.question}<br>
+                            创建时间：${cacheStats.oldestItem.timestamp}
+                        </div>
+                        ` : ''}
+                        
+                        ${cacheStats.newestItem ? `
+                        <div class="stat-item">
+                            <strong>🆕 最新缓存</strong><br>
+                            问题：${cacheStats.newestItem.question}<br>
+                            创建时间：${cacheStats.newestItem.timestamp}
+                        </div>
+                        ` : ''}
+                        
+                        <div class="stat-item">
+                            <strong>💡 缓存说明</strong><br>
+                            • 缓存会自动保存AI的回复，提高响应速度<br>
+                            • 相似问题会复用缓存回复<br>
+                            • 缓存24小时后自动过期<br>
+                            • 最多保存50个缓存项目
+                        </div>
+                        
+                        <button class="clear-btn" onclick="if(confirm('确定清空所有缓存？')) { 
+                            window.opener.cacheManager.clearCache(); 
+                            window.opener.showSuccessMessage('缓存已清空'); 
+                            window.close(); 
+                        }">清空所有缓存</button>
+                    </div>
+                </body>
+                </html>
+            `);
         }
 
         function toggleMockMode() {
@@ -1569,6 +1848,47 @@
                 mockModeButton.style.backgroundColor = 'transparent';
                 mockModeButton.style.color = '#6b7280';
                 mockModeButton.style.borderColor = '#d1d5db';
+            }
+        }
+
+        function updateProxyModeButton() {
+            if (apiService.proxyMode) {
+                proxyModeButton.textContent = '代理模式 ✓';
+                proxyModeButton.style.backgroundColor = '#3b82f6';
+                proxyModeButton.style.color = 'white';
+                proxyModeButton.style.borderColor = '#3b82f6';
+            } else {
+                proxyModeButton.textContent = '代理模式';
+                proxyModeButton.style.backgroundColor = 'transparent';
+                proxyModeButton.style.color = '#6b7280';
+                proxyModeButton.style.borderColor = '#d1d5db';
+            }
+        }
+
+        async function toggleProxyMode() {
+            if (!apiService.proxyMode) {
+                // 尝试启用代理模式前先测试连接
+                const isProxyAvailable = await apiService.testProxyConnection();
+                if (!isProxyAvailable) {
+                    alert('⚠️ 代理服务器未运行！\n\n请先启动代理服务器：\n1. 确保已安装 Node.js\n2. 在项目目录运行: node proxy-server.js\n3. 或双击 start-server.bat 文件\n\n代理服务器地址: http://localhost:3000');
+                    return;
+                }
+                
+                // 禁用模拟模式
+                if (apiService.mockMode) {
+                    apiService.mockMode = false;
+                    updateMockModeButton();
+                }
+            }
+            
+            const isEnabled = apiService.toggleProxyMode();
+            updateProxyModeButton();
+            
+            const status = isEnabled ? '已启用' : '已禁用';
+            showSuccessMessage(`代理模式${status}`);
+            
+            if (isEnabled) {
+                showSuccessMessage('🚀 全血模式已启用！现在可以直接调用真实API了！');
             }
         }
 
@@ -1645,6 +1965,8 @@
             exportButton.addEventListener('click', exportConversation);
             importButton.addEventListener('click', () => importFileInput.click());
             statsButton.addEventListener('click', showStats);
+            cacheButton.addEventListener('click', showCacheManager);
+            proxyModeButton.addEventListener('click', toggleProxyMode);
             mockModeButton.addEventListener('click', toggleMockMode);
             helpButton.addEventListener('click', showKeyboardShortcuts);
             importFileInput.addEventListener('change', handleImportFile);
@@ -1658,13 +1980,22 @@
                 // 初始化服务
                 messageManager = new MessageManager();
                 apiService = new APIService(API_KEY);
+                cacheManager = new CacheManager();
 
-                // 检查是否是本地文件，如果是则自动启用模拟模式
+                // 检查访问方式并自动设置模式
                 if (window.location.protocol === 'file:') {
+                    // 本地文件访问，启用模拟模式
                     apiService.mockMode = true;
                     console.log('检测到本地文件访问，自动启用模拟模式');
                     setTimeout(() => {
                         showMockModeNotice();
+                    }, 1000);
+                } else if (window.location.hostname === 'localhost' && window.location.port === '3000') {
+                    // localhost:3000访问，启用代理模式
+                    apiService.proxyMode = true;
+                    console.log('检测到代理服务器访问，自动启用代理模式');
+                    setTimeout(() => {
+                        showProxyModeNotice();
                     }, 1000);
                 }
 
@@ -1679,8 +2010,9 @@
                     showWelcomeMessage();
                 }
 
-                // 更新模拟模式按钮状态
+                // 更新按钮状态
                 updateMockModeButton();
+                updateProxyModeButton();
 
                 // 聚焦到输入框
                 messageInput.focus();

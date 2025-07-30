@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API调试工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 3px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>🔍 API调试工具</h1>
+    
+    <div class="section">
+        <h3>1. 测试代理服务器健康状态</h3>
+        <button onclick="testHealth()">测试健康检查</button>
+        <div id="healthResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h3>2. 发送简单API请求</h3>
+        <button onclick="testSimpleAPI()">发送简单请求</button>
+        <div id="simpleResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h3>3. 发送完整API请求</h3>
+        <button onclick="testFullAPI()">发送完整请求</button>
+        <div id="fullResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h3>4. 检查前端API调用</h3>
+        <button onclick="testFrontendAPI()">测试前端API调用</button>
+        <div id="frontendResult" class="result"></div>
+    </div>
+
+    <script>
+        const API_KEY = 'sk-fa7bde32774c4c4fa0446d8c84827e2a';
+        const PROXY_URL = 'http://localhost:3000/api/proxy';
+
+        async function testHealth() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.textContent = '正在测试健康检查...';
+            
+            try {
+                const response = await fetch('http://localhost:3000/health');
+                const data = await response.json();
+                
+                resultDiv.textContent = `✅ 健康检查成功\n\n${JSON.stringify(data, null, 2)}`;
+                resultDiv.className = 'result success';
+            } catch (error) {
+                resultDiv.textContent = `❌ 健康检查失败: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testSimpleAPI() {
+            const resultDiv = document.getElementById('simpleResult');
+            resultDiv.textContent = '正在发送简单API请求...';
+            
+            try {
+                const testData = {
+                    headers: {
+                        Authorization: `Bearer ${API_KEY}`
+                    },
+                    body: {
+                        model: "qwen-turbo",
+                        input: {
+                            messages: [
+                                {
+                                    role: "user",
+                                    content: "请简单回复：测试成功"
+                                }
+                            ]
+                        },
+                        parameters: {
+                            temperature: 0.7,
+                            max_tokens: 50
+                        }
+                    }
+                };
+
+                console.log('发送数据:', testData);
+
+                const response = await fetch(PROXY_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                console.log('响应状态:', response.status);
+                const result = await response.json();
+                console.log('响应数据:', result);
+                
+                if (response.ok) {
+                    resultDiv.textContent = `✅ 简单API请求成功\n\n响应状态: ${response.status}\n响应数据:\n${JSON.stringify(result, null, 2)}`;
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.textContent = `❌ 简单API请求失败\n\n状态: ${response.status}\n错误: ${JSON.stringify(result, null, 2)}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ 请求异常: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testFullAPI() {
+            const resultDiv = document.getElementById('fullResult');
+            resultDiv.textContent = '正在发送完整API请求...';
+            
+            try {
+                const testData = {
+                    headers: {
+                        Authorization: `Bearer ${API_KEY}`
+                    },
+                    body: {
+                        model: "qwen-turbo",
+                        input: {
+                            messages: [
+                                {
+                                    role: "system",
+                                    content: "你是一个专业的编程助手"
+                                },
+                                {
+                                    role: "user",
+                                    content: "你好，请介绍一下自己"
+                                }
+                            ]
+                        },
+                        parameters: {
+                            temperature: 0.7,
+                            max_tokens: 2000
+                        }
+                    }
+                };
+
+                const response = await fetch(PROXY_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok && result.output) {
+                    let aiResponse = '';
+                    
+                    // 支持新格式（output.text）
+                    if (result.output.text) {
+                        aiResponse = result.output.text;
+                    }
+                    // 支持旧格式（output.choices）
+                    else if (result.output.choices && result.output.choices.length > 0) {
+                        aiResponse = result.output.choices[0].message.content;
+                    }
+                    
+                    if (aiResponse) {
+                        resultDiv.textContent = `✅ 完整API请求成功\n\nAI回复: ${aiResponse}\n\n完整响应:\n${JSON.stringify(result, null, 2)}`;
+                        resultDiv.className = 'result success';
+                    } else {
+                        resultDiv.textContent = `❌ 完整API请求失败 - 无法解析AI回复\n\n状态: ${response.status}\n响应: ${JSON.stringify(result, null, 2)}`;
+                        resultDiv.className = 'result error';
+                    }
+                } else {
+                    resultDiv.textContent = `❌ 完整API请求失败\n\n状态: ${response.status}\n响应: ${JSON.stringify(result, null, 2)}`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.textContent = `❌ 请求异常: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testFrontendAPI() {
+            const resultDiv = document.getElementById('frontendResult');
+            resultDiv.textContent = '正在测试前端API调用逻辑...';
+            
+            try {
+                // 模拟前端的API调用逻辑
+                class TestAPIService {
+                    constructor(apiKey) {
+                        this.apiKey = apiKey;
+                        this.proxyURL = PROXY_URL;
+                    }
+
+                    async makeRequest(requestBody) {
+                        const response = await fetch(this.proxyURL, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                headers: {
+                                    'Authorization': `Bearer ${this.apiKey}`
+                                },
+                                body: requestBody
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+
+                        return await response.json();
+                    }
+
+                    parseResponse(response) {
+                        console.log('解析响应:', response);
+                        
+                        if (response.error) {
+                            throw new Error(`API错误: ${response.error}`);
+                        }
+                        
+                        if (!response.output) {
+                            throw new Error('API响应格式无效');
+                        }
+
+                        // 支持新的API响应格式（直接在output中有text字段）
+                        if (response.output.text) {
+                            return {
+                                content: response.output.text.trim(),
+                                finishReason: response.output.finish_reason || 'stop'
+                            };
+                        }
+
+                        // 支持旧的API响应格式（choices数组格式）
+                        if (response.output.choices && response.output.choices.length > 0) {
+                            const choice = response.output.choices[0];
+                            if (choice.message && choice.message.content) {
+                                return {
+                                    content: choice.message.content.trim(),
+                                    finishReason: choice.finish_reason || 'stop'
+                                };
+                            }
+                        }
+
+                        throw new Error('API响应内容为空');
+                    }
+
+                    async sendMessage(userMessage) {
+                        const requestBody = {
+                            model: "qwen-turbo",
+                            input: {
+                                messages: [
+                                    {
+                                        role: "system",
+                                        content: "你是一个专业的编程助手"
+                                    },
+                                    {
+                                        role: "user",
+                                        content: userMessage
+                                    }
+                                ]
+                            },
+                            parameters: {
+                                temperature: 0.7,
+                                max_tokens: 2000
+                            }
+                        };
+
+                        const response = await this.makeRequest(requestBody);
+                        return this.parseResponse(response);
+                    }
+                }
+
+                const testAPI = new TestAPIService(API_KEY);
+                const result = await testAPI.sendMessage("你好，请简单介绍一下自己");
+                
+                resultDiv.textContent = `✅ 前端API调用成功\n\nAI回复: ${result.content}`;
+                resultDiv.className = 'result success';
+                
+            } catch (error) {
+                resultDiv.textContent = `❌ 前端API调用失败: ${error.message}\n\n错误堆栈:\n${error.stack}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        // 页面加载时自动测试健康检查
+        window.onload = function() {
+            setTimeout(testHealth, 500);
+        };
+    </script>
+</body>
+</html>
