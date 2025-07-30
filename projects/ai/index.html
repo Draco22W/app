@@ -3098,6 +3098,190 @@
 
             // HTML特殊处理
             if (language.toLowerCase() === 'html') {
+                if (rules.tags) {
+                    highlighted = highlighted.replace(rules.tags, '<span class="code-tag">$&</span>');
+                }
+                if (rules.attributes) {
+                    highlighted = highlighted.replace(rules.attributes, '<span class="code-attribute">$1</span>=');
+                }
+            }
+
+            // CSS特殊处理
+            if (language.toLowerCase() === 'css') {
+                if (rules.selectors) {
+                    highlighted = highlighted.replace(rules.selectors, '<span class="code-selector">$&</span>');
+                }
+                if (rules.properties) {
+                    highlighted = highlighted.replace(rules.properties, '<span class="code-property">$&</span>');
+                }
+            }
+
+            return highlighted;
+        }
+
+        // HTML转义函数
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 复制代码功能
+        function copyCode(button) {
+            const codeBlock = button.closest('.code-block');
+            const code = codeBlock.querySelector('code').textContent;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = '✓';
+                button.style.color = '#10a37f';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.color = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                // 降级方案：选择文本
+                const range = document.createRange();
+                range.selectNodeContents(codeBlock.querySelector('code'));
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            });
+        }
+
+        // 智能滚动到底部
+        function smartScrollToBottom() {
+            const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
+            const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
+            
+            if (isNearBottom) {
+                messagesContainer.scrollTo({
+                    top: scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+        }
+
+        // 更新消息状态
+        function updateMessageStatus(messageId, status) {
+            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                messageElement.setAttribute('data-status', status);
+                
+                // 更新样式
+                if (status === 'sent') {
+                    messageElement.style.opacity = '1';
+                    const textContainer = messageElement.querySelector('.message-text');
+                    textContainer.style.borderLeft = '';
+                } else if (status === 'error') {
+                    messageElement.style.opacity = '0.6';
+                    const textContainer = messageElement.querySelector('.message-text');
+                    textContainer.style.borderLeft = '3px solid #dc2626';
+                }
+                
+                // 更新状态指示器
+                const statusIndicator = messageElement.querySelector('.message-status');
+                if (statusIndicator) {
+                    if (status === 'sent') {
+                        statusIndicator.remove();
+                    } else if (status === 'error') {
+                        statusIndicator.innerHTML = ' <span style="color: #dc2626;">发送失败</span>';
+                    }
+                }
+            }
+        }
+
+        // 清除消息UI
+        function clearMessagesUI() {
+            const messages = messagesContainer.querySelectorAll('.message');
+            messages.forEach(msg => msg.remove());
+            
+            // 显示欢迎消息
+            const welcomeMessage = document.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.style.display = 'block';
+            } else {
+                showWelcomeMessage();
+            }
+        }
+
+        // 显示欢迎消息
+        function showWelcomeMessage() {
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'welcome-message';
+            welcomeDiv.innerHTML = `
+                <h2>欢迎使用编程助手！</h2>
+                <p>我是你的专属编程助手，可以帮助你解决各种编程问题、代码调试、算法设计等。请随时向我提问！</p>
+            `;
+            messagesContainer.appendChild(welcomeDiv);
+        }
+
+        // 渲染历史消息
+        function renderHistoryMessages() {
+            const messages = messageManager.getMessages();
+            messages.forEach(message => {
+                renderMessage(message);
+            });
+        }
+
+        // 消息监听器
+        function setupMessageListener() {
+            messageManager.addMessageListener((event, data) => {
+                switch (event) {
+                    case 'messageAdded':
+                        // 消息已通过sendMessage函数渲染，这里不需要重复渲染
+                        break;
+                    case 'messagesCleared':
+                        clearMessagesUI();
+                        break;
+                    case 'messageStatusUpdated':
+                        updateMessageStatus(data.messageId, data.status);
+                        break;
+                }
+            });
+        }
+
+        // 应用初始化
+        async function initializeApp() {
+            try {
+                console.log('🚀 初始化编程助手应用...');
+
+                // 初始化核心服务
+                messageManager = new MessageManager();
+                apiService = new APIService(API_KEY);
+                errorHandler = new ErrorHandler();
+                networkMonitor = new NetworkMonitor();
+                performanceMonitor = new PerformanceMonitor();
+
+                // 设置消息监听器
+                setupMessageListener();
+
+                // 渲染历史消息
+                renderHistoryMessages();
+
+                // 如果没有历史消息，显示欢迎信息
+                if (messageManager.getMessages().length === 0) {
+                    showWelcomeMessage();
+                }
+
+                // 更新模拟模式按钮状态
+                updateMockModeButton();
+
+                // 聚焦到输入框
+                messageInput.focus();
+
+                console.log('✅ 应用初始化完成');
+
+            } catch (error) {
+                console.error('❌ 应用初始化失败:', error);
+                if (errorHandler) {
+                    errorHandler.handleError(error, 'initialization');
+                }
+                showErrorMessage('应用初始化失败，请刷新页面重试');
+            }
+        }
                 highlighted = highlighted.replace(rules.tags, '<span class="code-tag">$&</span>');
                 highlighted = highlighted.replace(rules.attributes, ' <span class="code-attribute">$1</span>=');
             }
@@ -3516,6 +3700,380 @@
                 console.error('API连接测试出错:', error);
             }
         }
+
+        // UI渲染和交互函数
+        function renderMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${message.role}`;
+            messageDiv.setAttribute('data-message-id', message.id);
+            messageDiv.setAttribute('data-status', message.status);
+
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = message.role === 'user' ? '你' : 'AI';
+
+            const messageText = document.createElement('div');
+            messageText.className = 'message-text';
+            
+            // 处理代码块和格式化
+            messageText.innerHTML = formatMessageContent(message.content);
+
+            const messageTime = document.createElement('div');
+            messageTime.className = 'message-time';
+            messageTime.textContent = message.getFormattedTime();
+
+            messageContent.appendChild(avatar);
+            messageContent.appendChild(messageText);
+            messageDiv.appendChild(messageContent);
+            messageDiv.appendChild(messageTime);
+
+            // 移除欢迎消息
+            const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+
+            messagesContainer.appendChild(messageDiv);
+            
+            // 为代码块添加复制功能
+            addCopyCodeButtons(messageDiv);
+            
+            return messageDiv;
+        }
+
+        function formatMessageContent(content) {
+            // 转义HTML特殊字符
+            let formatted = content
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+
+            // 处理代码块 (```language\ncode\n```)
+            formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (match, language, code) => {
+                const lang = language || 'text';
+                return `<div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">${lang}</span>
+                        <button class="copy-code-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code>${code.trim()}</code></pre>
+                </div>`;
+            });
+
+            // 处理行内代码 (`code`)
+            formatted = formatted.replace(/`([^`]+)`/g, '<span class="inline-code">$1</span>');
+
+            // 处理链接
+            formatted = formatted.replace(
+                /(https?:\/\/[^\s]+)/g,
+                '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+            );
+
+            // 处理粗体 (**text**)
+            formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+            // 处理斜体 (*text*)
+            formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+            // 处理换行
+            formatted = formatted.replace(/\n/g, '<br>');
+
+            return formatted;
+        }
+
+        function addCopyCodeButtons(messageDiv) {
+            const codeBlocks = messageDiv.querySelectorAll('.code-block');
+            codeBlocks.forEach(block => {
+                const copyBtn = block.querySelector('.copy-code-btn');
+                if (copyBtn) {
+                    copyBtn.addEventListener('click', () => copyCode(copyBtn));
+                }
+            });
+        }
+
+        function copyCode(button) {
+            const codeBlock = button.closest('.code-block');
+            const code = codeBlock.querySelector('code').textContent;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = button.textContent;
+                button.textContent = '已复制';
+                button.style.color = '#10a37f';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.color = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                showErrorMessage('复制失败，请手动选择代码');
+            });
+        }
+
+        function updateMessageStatus(messageId, status) {
+            const messageDiv = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageDiv) {
+                messageDiv.setAttribute('data-status', status);
+            }
+        }
+
+        function scrollToBottom(smooth = true) {
+            const scrollOptions = {
+                top: messagesContainer.scrollHeight,
+                behavior: smooth ? 'smooth' : 'auto'
+            };
+            messagesContainer.scrollTo(scrollOptions);
+            
+            // 隐藏滚动到底部按钮
+            hideScrollToBottomButton();
+        }
+
+        function showScrollToBottomButton() {
+            let scrollBtn = document.getElementById('scrollToBottomBtn');
+            if (!scrollBtn) {
+                scrollBtn = document.createElement('button');
+                scrollBtn.id = 'scrollToBottomBtn';
+                scrollBtn.className = 'scroll-to-bottom-btn';
+                scrollBtn.innerHTML = '↓';
+                scrollBtn.title = '滚动到底部';
+                scrollBtn.onclick = () => scrollToBottom();
+                
+                scrollBtn.style.cssText = `
+                    position: fixed;
+                    bottom: 100px;
+                    right: 20px;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    background-color: #10a37f;
+                    color: white;
+                    border: none;
+                    cursor: pointer;
+                    font-size: 18px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                    z-index: 1000;
+                    transition: all 0.3s ease;
+                    display: none;
+                `;
+                
+                document.body.appendChild(scrollBtn);
+            }
+            scrollBtn.style.display = 'block';
+        }
+
+        function hideScrollToBottomButton() {
+            const scrollBtn = document.getElementById('scrollToBottomBtn');
+            if (scrollBtn) {
+                scrollBtn.style.display = 'none';
+            }
+        }
+
+        function clearMessagesUI() {
+            const messages = messagesContainer.querySelectorAll('.message');
+            messages.forEach(msg => msg.remove());
+        }
+
+        function showWelcomeMessage() {
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'welcome-message';
+            welcomeDiv.innerHTML = `
+                <h2>欢迎使用编程助手！</h2>
+                <p>我是你的专属编程助手，可以帮助你解决各种编程问题、代码调试、算法设计等。请随时向我提问！</p>
+            `;
+            messagesContainer.appendChild(welcomeDiv);
+        }
+
+        function renderHistoryMessages() {
+            const messages = messageManager.getMessages();
+            messages.forEach(message => {
+                renderMessage(message);
+            });
+            
+            if (messages.length > 0) {
+                scrollToBottom(false);
+            }
+        }
+
+        function setSendButtonState(enabled) {
+            sendButton.disabled = !enabled;
+            if (enabled) {
+                sendButton.style.backgroundColor = '#10a37f';
+                sendButton.style.cursor = 'pointer';
+            } else {
+                sendButton.style.backgroundColor = '#d1d5db';
+                sendButton.style.cursor = 'not-allowed';
+            }
+        }
+
+        function showLoadingIndicator() {
+            loadingIndicator.style.display = 'block';
+            scrollToBottom();
+        }
+
+        function hideLoadingIndicator() {
+            loadingIndicator.style.display = 'none';
+        }
+
+        function showErrorMessage(message, options = {}) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            
+            if (options.showRetry && options.retryCallback) {
+                const retryBtn = document.createElement('button');
+                retryBtn.textContent = '重试';
+                retryBtn.style.cssText = `
+                    margin-left: 10px;
+                    padding: 5px 10px;
+                    background: #10a37f;
+                    color: white;
+                    border: none;
+                    border-radius: 3px;
+                    cursor: pointer;
+                `;
+                retryBtn.onclick = () => {
+                    hideErrorMessage();
+                    options.retryCallback();
+                };
+                errorMessage.appendChild(retryBtn);
+            }
+            
+            // 自动隐藏错误信息
+            setTimeout(() => {
+                hideErrorMessage();
+            }, 10000);
+        }
+
+        function hideErrorMessage() {
+            errorMessage.style.display = 'none';
+            errorMessage.innerHTML = '';
+        }
+
+        function showSuccessMessage(message) {
+            // 创建成功提示
+            const successDiv = document.createElement('div');
+            successDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background-color: #10a37f;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 6px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 1000;
+                font-size: 14px;
+                animation: slideInRight 0.3s ease-out;
+            `;
+            successDiv.textContent = message;
+            
+            // 添加动画样式
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(successDiv);
+            
+            // 3秒后自动移除
+            setTimeout(() => {
+                successDiv.remove();
+                style.remove();
+            }, 3000);
+        }
+
+        // 监听消息容器滚动事件
+        messagesContainer.addEventListener('scroll', () => {
+            const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
+            const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10;
+            
+            if (!isAtBottom && messagesContainer.children.length > 1) {
+                showScrollToBottomButton();
+            } else {
+                hideScrollToBottomButton();
+            }
+        });
+
+        // 应用初始化
+        async function initializeApp() {
+            try {
+                console.log('🚀 初始化编程助手应用...');
+
+                // 初始化核心服务
+                messageManager = new MessageManager();
+                apiService = new APIService(API_KEY);
+                errorHandler = new ErrorHandler();
+                networkMonitor = new NetworkMonitor();
+                performanceMonitor = new PerformanceMonitor();
+
+                // 设置消息管理器监听器
+                messageManager.addMessageListener((event, data) => {
+                    console.log(`消息事件: ${event}`, data);
+                });
+
+                // 渲染历史消息
+                renderHistoryMessages();
+
+                // 如果没有历史消息，显示欢迎信息
+                if (messageManager.getMessages().length === 0) {
+                    showWelcomeMessage();
+                }
+
+                // 更新模拟模式按钮状态
+                updateMockModeButton();
+
+                // 聚焦到输入框
+                messageInput.focus();
+
+                console.log('✅ 应用初始化完成');
+
+                // 记录应用启动性能
+                performanceMonitor.recordRenderTime('app-initialization', performance.now());
+
+            } catch (error) {
+                console.error('❌ 应用初始化失败:', error);
+                errorHandler.handleError(error, 'initialization');
+                showErrorMessage('应用初始化失败，请刷新页面重试');
+            }
+        }
+
+        // 页面加载完成后初始化应用
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        } else {
+            initializeApp();
+        }
+
+        // 页面卸载前保存数据
+        window.addEventListener('beforeunload', () => {
+            if (messageManager) {
+                messageManager.saveConversation();
+            }
+        });
+
+        // 全局错误处理
+        window.addEventListener('error', (event) => {
+            console.error('全局错误:', event.error);
+            if (errorHandler) {
+                errorHandler.handleError(event.error, 'global');
+            }
+        });
+
+        // 未处理的Promise拒绝
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('未处理的Promise拒绝:', event.reason);
+            if (errorHandler) {
+                errorHandler.handleError(event.reason, 'promise');
+            }
+        });
     </script>
 </body>
 
