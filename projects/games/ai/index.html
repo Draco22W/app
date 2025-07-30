@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编程助手 - AI聊天机器人</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #ffffff;
+            color: #353740;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            border-left: 1px solid #e5e5e5;
+            border-right: 1px solid #e5e5e5;
+        }
+
+        .header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e5e5e5;
+            padding: 1rem;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #10a37f;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem 0;
+            background-color: #ffffff;
+        }
+
+        .message {
+            margin-bottom: 1.5rem;
+            padding: 0 1rem;
+        }
+
+        .message-content {
+            max-width: 48rem;
+            margin: 0 auto;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .message.user .message-content {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background-color: #10a37f;
+            color: white;
+        }
+
+        .message.assistant .message-avatar {
+            background-color: #ab68ff;
+            color: white;
+        }
+
+        .message-text {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-text {
+            background-color: #f7f7f8;
+            margin-left: 2rem;
+        }
+
+        .message.assistant .message-text {
+            background-color: transparent;
+            margin-right: 2rem;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: #8e8ea0;
+            margin-top: 0.25rem;
+        }
+
+        .input-container {
+            border-top: 1px solid #e5e5e5;
+            background-color: #ffffff;
+            padding: 1rem;
+        }
+
+        .input-wrapper {
+            max-width: 48rem;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .message-input {
+            width: 100%;
+            min-height: 3rem;
+            max-height: 12rem;
+            padding: 0.75rem 3rem 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.75rem;
+            resize: none;
+            font-family: inherit;
+            font-size: 1rem;
+            line-height: 1.5;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .message-input:focus {
+            border-color: #10a37f;
+            box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.1);
+        }
+
+        .send-button {
+            position: absolute;
+            right: 0.5rem;
+            bottom: 0.5rem;
+            width: 2rem;
+            height: 2rem;
+            background-color: #10a37f;
+            color: white;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .send-button:hover:not(:disabled) {
+            background-color: #0d8f6b;
+        }
+
+        .send-button:disabled {
+            background-color: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .control-button {
+            padding: 0.5rem 1rem;
+            background-color: transparent;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .control-button:hover {
+            background-color: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        .loading-indicator {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+            color: #6b7280;
+        }
+
+        .loading-dots {
+            display: inline-block;
+        }
+
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        .error-message {
+            background-color: #fef2f2;
+            color: #dc2626;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem;
+            border: 1px solid #fecaca;
+            display: none;
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+            max-width: 32rem;
+            margin: 2rem auto;
+        }
+
+        .welcome-message h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #374151;
+        }
+
+        /* 代码块样式 */
+        .code-block {
+            background-color: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 0.375rem;
+            margin: 0.5rem 0;
+            overflow: hidden;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+
+        .code-header {
+            background-color: #e1e4e8;
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #d0d7de;
+        }
+
+        .code-language {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #656d76;
+            text-transform: uppercase;
+        }
+
+        .copy-code-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            color: #656d76;
+            transition: all 0.2s;
+        }
+
+        .copy-code-btn:hover {
+            background-color: #d0d7de;
+            color: #24292f;
+        }
+
+        .code-block pre {
+            margin: 0;
+            padding: 1rem;
+            overflow-x: auto;
+            background-color: transparent;
+        }
+
+        .code-block code {
+            font-family: inherit;
+            font-size: inherit;
+            background-color: transparent;
+            padding: 0;
+        }
+
+        .inline-code {
+            background-color: #f6f8fa;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875rem;
+            color: #d73a49;
+            border: 1px solid #e1e4e8;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .chat-container {
+                border-left: none;
+                border-right: none;
+            }
+
+            .header {
+                padding: 0.75rem 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.125rem;
+            }
+
+            .message {
+                padding: 0 0.75rem;
+                margin-bottom: 1rem;
+            }
+
+            .message-content {
+                max-width: none;
+                gap: 0.75rem;
+            }
+
+            .message-avatar {
+                width: 1.75rem;
+                height: 1.75rem;
+                font-size: 0.75rem;
+            }
+
+            .message-text {
+                margin-left: 0.5rem !important;
+                margin-right: 0.5rem !important;
+                padding: 0.625rem 0.875rem;
+            }
+
+            .input-container {
+                padding: 0.75rem;
+            }
+
+            .controls {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .control-button {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.8rem;
+                flex: 1;
+                min-width: calc(50% - 0.25rem);
+                max-width: calc(50% - 0.25rem);
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                font-size: 14px;
+            }
+
+            .header {
+                padding: 0.5rem 0.75rem;
+            }
+
+            .header h1 {
+                font-size: 1rem;
+            }
+
+            .message {
+                padding: 0 0.5rem;
+                margin-bottom: 0.875rem;
+            }
+
+            .message-content {
+                gap: 0.5rem;
+            }
+
+            .message-avatar {
+                width: 1.5rem;
+                height: 1.5rem;
+                font-size: 0.7rem;
+            }
+
+            .message-text {
+                margin-left: 0.25rem !important;
+                margin-right: 0.25rem !important;
+                padding: 0.5rem 0.75rem;
+                font-size: 0.9rem;
+                line-height: 1.4;
+            }
+
+            .message-input {
+                font-size: 16px; /* 防止iOS缩放 */
+                padding: 0.625rem 2.5rem 0.625rem 0.75rem;
+                min-height: 2.5rem;
+            }
+
+            .send-button {
+                width: 1.75rem;
+                height: 1.75rem;
+                right: 0.375rem;
+                bottom: 0.375rem;
+            }
+
+            .control-button {
+                font-size: 0.75rem;
+                padding: 0.375rem 0.625rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <header class="header">
+            <h1>🤖 编程助手</h1>
+        </header>
+
+        <div class="messages-container" id="messagesContainer">
+            <div class="welcome-message">
+                <h2>欢迎使用编程助手！</h2>
+                <p>我是你的专属编程助手，可以帮助你解决各种编程问题、代码调试、算法设计等。请随时向我提问！</p>
+            </div>
+        </div>
+
+        <div class="loading-indicator" id="loadingIndicator">
+            <span class="loading-dots">AI正在思考中</span>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="input-container">
+            <div class="input-wrapper">
+                <textarea id="messageInput" class="message-input" placeholder="输入你的编程问题..." rows="1"></textarea>
+                <button id="sendButton" class="send-button" title="发送消息 (Ctrl+Enter)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="controls">
+                <button id="clearButton" class="control-button">清除历史记录</button>
+                <button id="exportButton" class="control-button">导出对话</button>
+                <button id="importButton" class="control-button">导入对话</button>
+                <button id="statsButton" class="control-button">统计信息</button>
+                <button id="cacheButton" class="control-button">缓存管理</button>
+                <button id="proxyModeButton" class="control-button">代理模式</button>
+                <button id="mockModeButton" class="control-button">模拟模式</button>
+                <button id="helpButton" class="control-button">快捷键</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隐藏的文件输入框 -->
+    <input type="file" id="importFileInput" accept=".json" style="display: none;">
+
+    <script>
+        // 配置和全局变量
+        const API_KEY = 'sk-fa7bde32774c4c4fa0446d8c84827e2a';
+        const API_URL = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation';
+
+        // DOM元素
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const clearButton = document.getElementById('clearButton');
+        const exportButton = document.getElementById('exportButton');
+        const importButton = document.getElementById('importButton');
+        const statsButton = document.getElementById('statsButton');
+        const cacheButton = document.getElementById('cacheButton');
+        const proxyModeButton = document.getElementById('proxyModeButton');
+        const mockModeButton = document.getElementById('mockModeButton');
+        const helpButton = document.getElementById('helpButton');
+        const importFileInput = document.getElementById('importFileInput');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // 全局变量
+        let messageManager;
+        let apiService;
+        let cacheManager;
+        let isLoading = false;
+  
+      // 消息类
+        class Message {
+            constructor(role, content, status = 'sent') {
+                this.id = this.generateId();
+                this.role = role; // 'user' | 'assistant'
+                this.content = content;
+                this.timestamp = new Date();
+                this.status = status; // 'sending' | 'sent' | 'error'
+            }
+
+            generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+
+            getFormattedTime() {
+                const now = new Date();
+                const diff = now - this.timestamp;
+
+                if (diff < 60000) {
+                    return '刚刚';
+                } else if (diff < 3600000) {
+                    return Math.floor(diff / 60000) + '分钟前';
+                } else if (diff < 86400000) {
+                    return Math.floor(diff / 3600000) + '小时前';
+                } else {
+                    return this.timestamp.toLocaleDateString('zh-CN', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+            }
+
+            updateStatus(newStatus) {
+                this.status = newStatus;
+            }
+
+            toJSON() {
+                return {
+                    id: this.id,
+                    role: this.role,
+                    content: this.content,
+                    timestamp: this.timestamp.toISOString(),
+                    status: this.status
+                };
+            }
+
+            static fromJSON(json) {
+                const message = new Message(json.role, json.content, json.status);
+                message.id = json.id;
+                message.timestamp = new Date(json.timestamp);
+                return message;
+            }
+        }
+
+        // 对话管理类
+        class Conversation {
+            constructor() {
+                this.id = this.generateId();
+                this.messages = [];
+                this.createdAt = new Date();
+                this.updatedAt = new Date();
+                this.maxMessages = 100;
+            }
+
+            generateId() {
+                return 'conv_' + Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+
+            addMessage(message) {
+                this.messages.push(message);
+                this.updatedAt = new Date();
+
+                if (this.messages.length > this.maxMessages) {
+                    this.messages.shift();
+                }
+
+                return message;
+            }
+
+            getMessages() {
+                return [...this.messages];
+            }
+
+            clearMessages() {
+                this.messages = [];
+                this.updatedAt = new Date();
+            }
+
+            findMessage(messageId) {
+                return this.messages.find(msg => msg.id === messageId);
+            }
+
+            updateMessageStatus(messageId, status) {
+                const message = this.findMessage(messageId);
+                if (message) {
+                    message.updateStatus(status);
+                    this.updatedAt = new Date();
+                    return true;
+                }
+                return false;
+            }
+
+            toJSON() {
+                return {
+                    id: this.id,
+                    messages: this.messages.map(msg => msg.toJSON()),
+                    createdAt: this.createdAt.toISOString(),
+                    updatedAt: this.updatedAt.toISOString()
+                };
+            }
+
+            static fromJSON(json) {
+                const conversation = new Conversation();
+                conversation.id = json.id;
+                conversation.createdAt = new Date(json.createdAt);
+                conversation.updatedAt = new Date(json.updatedAt);
+                conversation.messages = json.messages.map(msgJson => Message.fromJSON(msgJson));
+                return conversation;
+            }
+        }
+
+        // 本地存储服务
+        class StorageService {
+            constructor() {
+                this.storageKey = 'programming_chatbot_conversation';
+            }
+
+            saveConversation(conversation) {
+                try {
+                    const jsonData = JSON.stringify(conversation.toJSON());
+                    localStorage.setItem(this.storageKey, jsonData);
+                    return true;
+                } catch (error) {
+                    console.error('保存对话失败:', error);
+                    return false;
+                }
+            }
+
+            loadConversation() {
+                try {
+                    const jsonData = localStorage.getItem(this.storageKey);
+                    if (!jsonData) {
+                        return new Conversation();
+                    }
+                    const parsedData = JSON.parse(jsonData);
+                    return Conversation.fromJSON(parsedData);
+                } catch (error) {
+                    console.error('加载对话失败:', error);
+                    this.clearConversation();
+                    return new Conversation();
+                }
+            }
+
+            clearConversation() {
+                try {
+                    localStorage.removeItem(this.storageKey);
+                    return true;
+                } catch (error) {
+                    console.error('清除对话失败:', error);
+                    return false;
+                }
+            }
+
+            exportConversation() {
+                try {
+                    const conversation = this.loadConversation();
+                    const exportData = {
+                        exportTime: new Date().toISOString(),
+                        conversation: conversation.toJSON()
+                    };
+                    return JSON.stringify(exportData, null, 2);
+                } catch (error) {
+                    console.error('导出对话失败:', error);
+                    return null;
+                }
+            }
+
+            importConversation(jsonData) {
+                try {
+                    const importData = JSON.parse(jsonData);
+                    const conversation = Conversation.fromJSON(importData.conversation);
+                    return this.saveConversation(conversation);
+                } catch (error) {
+                    console.error('导入对话失败:', error);
+                    return false;
+                }
+            }
+        }
+
+        // 消息管理器
+        class MessageManager {
+            constructor() {
+                this.conversation = null;
+                this.storageService = new StorageService();
+                this.init();
+            }
+
+            init() {
+                this.loadConversation();
+            }
+
+            loadConversation() {
+                this.conversation = this.storageService.loadConversation();
+                return true;
+            }
+
+            saveConversation() {
+                if (!this.conversation) {
+                    return false;
+                }
+                return this.storageService.saveConversation(this.conversation);
+            }
+
+            addMessage(role, content, status = 'sent') {
+                if (!this.conversation) {
+                    this.conversation = new Conversation();
+                }
+
+                const message = new Message(role, content, status);
+                this.conversation.addMessage(message);
+                this.saveConversation();
+                return message;
+            }
+
+            getMessages() {
+                if (!this.conversation) {
+                    return [];
+                }
+                return this.conversation.getMessages();
+            }
+
+            updateMessageStatus(messageId, status) {
+                if (!this.conversation) {
+                    return false;
+                }
+                const success = this.conversation.updateMessageStatus(messageId, status);
+                if (success) {
+                    this.saveConversation();
+                }
+                return success;
+            }
+
+            clearMessages() {
+                if (this.conversation) {
+                    this.conversation.clearMessages();
+                } else {
+                    this.conversation = new Conversation();
+                }
+                this.storageService.clearConversation();
+                return true;
+            }
+
+            getMessageStats() {
+                if (!this.conversation) {
+                    return {
+                        totalMessages: 0,
+                        userMessages: 0,
+                        assistantMessages: 0
+                    };
+                }
+
+                const messages = this.conversation.getMessages();
+                const userMessages = messages.filter(msg => msg.role === 'user').length;
+                const assistantMessages = messages.filter(msg => msg.role === 'assistant').length;
+
+                return {
+                    totalMessages: messages.length,
+                    userMessages,
+                    assistantMessages
+                };
+            }
+
+            exportConversation() {
+                return this.storageService.exportConversation();
+            }
+
+            importConversation(jsonData) {
+                const success = this.storageService.importConversation(jsonData);
+                if (success) {
+                    this.loadConversation();
+                }
+                return success;
+            }
+        }
+
+        // 缓存管理器
+        class CacheManager {
+            constructor() {
+                this.cacheKey = 'programming_chatbot_cache';
+                this.maxCacheSize = 50; // 最多缓存50个问答对
+                this.cacheExpiry = 24 * 60 * 60 * 1000; // 24小时过期
+            }
+
+            // 生成缓存键
+            generateCacheKey(question) {
+                // 简化问题，去除标点符号和多余空格，转为小写
+                return question.toLowerCase()
+                    .replace(/[^\w\s\u4e00-\u9fa5]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            }
+
+            // 获取缓存
+            getCache(question) {
+                try {
+                    const cacheData = localStorage.getItem(this.cacheKey);
+                    if (!cacheData) return null;
+
+                    const cache = JSON.parse(cacheData);
+                    const key = this.generateCacheKey(question);
+                    const item = cache[key];
+
+                    if (!item) return null;
+
+                    // 检查是否过期
+                    if (Date.now() - item.timestamp > this.cacheExpiry) {
+                        this.removeFromCache(question);
+                        return null;
+                    }
+
+                    // 更新访问时间
+                    item.lastAccessed = Date.now();
+                    item.accessCount = (item.accessCount || 0) + 1;
+                    localStorage.setItem(this.cacheKey, JSON.stringify(cache));
+
+                    console.log('从缓存获取回复:', key);
+                    return item.response;
+                } catch (error) {
+                    console.error('获取缓存失败:', error);
+                    return null;
+                }
+            }
+
+            // 设置缓存
+            setCache(question, response) {
+                try {
+                    let cache = {};
+                    const cacheData = localStorage.getItem(this.cacheKey);
+                    if (cacheData) {
+                        cache = JSON.parse(cacheData);
+                    }
+
+                    const key = this.generateCacheKey(question);
+                    
+                    // 添加新的缓存项
+                    cache[key] = {
+                        question: question,
+                        response: response,
+                        timestamp: Date.now(),
+                        lastAccessed: Date.now(),
+                        accessCount: 1
+                    };
+
+                    // 检查缓存大小，如果超过限制则清理旧的
+                    this.cleanupCache(cache);
+
+                    localStorage.setItem(this.cacheKey, JSON.stringify(cache));
+                    console.log('缓存回复:', key);
+                } catch (error) {
+                    console.error('设置缓存失败:', error);
+                }
+            }
+
+            // 清理缓存
+            cleanupCache(cache) {
+                const keys = Object.keys(cache);
+                if (keys.length <= this.maxCacheSize) return;
+
+                // 按最后访问时间排序，删除最旧的
+                const sortedKeys = keys.sort((a, b) => {
+                    return cache[a].lastAccessed - cache[b].lastAccessed;
+                });
+
+                // 删除最旧的项目，保持在限制内
+                const keysToDelete = sortedKeys.slice(0, keys.length - this.maxCacheSize);
+                keysToDelete.forEach(key => {
+                    delete cache[key];
+                });
+
+                console.log(`清理了 ${keysToDelete.length} 个旧缓存项`);
+            }
+
+            // 从缓存中移除特定项
+            removeFromCache(question) {
+                try {
+                    const cacheData = localStorage.getItem(this.cacheKey);
+                    if (!cacheData) return;
+
+                    const cache = JSON.parse(cacheData);
+                    const key = this.generateCacheKey(question);
+                    
+                    if (cache[key]) {
+                        delete cache[key];
+                        localStorage.setItem(this.cacheKey, JSON.stringify(cache));
+                    }
+                } catch (error) {
+                    console.error('移除缓存失败:', error);
+                }
+            }
+
+            // 清空所有缓存
+            clearCache() {
+                try {
+                    localStorage.removeItem(this.cacheKey);
+                    console.log('缓存已清空');
+                    return true;
+                } catch (error) {
+                    console.error('清空缓存失败:', error);
+                    return false;
+                }
+            }
+
+            // 获取缓存统计信息
+            getCacheStats() {
+                try {
+                    const cacheData = localStorage.getItem(this.cacheKey);
+                    if (!cacheData) {
+                        return {
+                            totalItems: 0,
+                            totalSize: 0,
+                            oldestItem: null,
+                            newestItem: null
+                        };
+                    }
+
+                    const cache = JSON.parse(cacheData);
+                    const keys = Object.keys(cache);
+                    const items = keys.map(key => cache[key]);
+
+                    let oldestItem = null;
+                    let newestItem = null;
+                    let totalAccessCount = 0;
+
+                    if (items.length > 0) {
+                        oldestItem = items.reduce((oldest, item) => 
+                            item.timestamp < oldest.timestamp ? item : oldest
+                        );
+                        newestItem = items.reduce((newest, item) => 
+                            item.timestamp > newest.timestamp ? item : newest
+                        );
+                        totalAccessCount = items.reduce((sum, item) => sum + (item.accessCount || 0), 0);
+                    }
+
+                    return {
+                        totalItems: keys.length,
+                        totalSize: Math.round(cacheData.length / 1024 * 100) / 100, // KB
+                        totalAccessCount,
+                        oldestItem: oldestItem ? {
+                            question: oldestItem.question.substring(0, 50) + '...',
+                            timestamp: new Date(oldestItem.timestamp).toLocaleString()
+                        } : null,
+                        newestItem: newestItem ? {
+                            question: newestItem.question.substring(0, 50) + '...',
+                            timestamp: new Date(newestItem.timestamp).toLocaleString()
+                        } : null
+                    };
+                } catch (error) {
+                    console.error('获取缓存统计失败:', error);
+                    return null;
+                }
+            }
+
+            // 检查问题相似度（简单的相似度检查）
+            findSimilarCache(question) {
+                try {
+                    const cacheData = localStorage.getItem(this.cacheKey);
+                    if (!cacheData) return null;
+
+                    const cache = JSON.parse(cacheData);
+                    const questionKey = this.generateCacheKey(question);
+                    const questionWords = questionKey.split(' ');
+
+                    let bestMatch = null;
+                    let bestScore = 0;
+
+                    Object.keys(cache).forEach(key => {
+                        const cachedWords = key.split(' ');
+                        const commonWords = questionWords.filter(word => 
+                            cachedWords.includes(word) && word.length > 2
+                        );
+                        
+                        const score = commonWords.length / Math.max(questionWords.length, cachedWords.length);
+                        
+                        if (score > bestScore && score > 0.6) { // 60%相似度阈值
+                            bestScore = score;
+                            bestMatch = cache[key];
+                        }
+                    });
+
+                    if (bestMatch && Date.now() - bestMatch.timestamp <= this.cacheExpiry) {
+                        console.log(`找到相似缓存，相似度: ${Math.round(bestScore * 100)}%`);
+                        return bestMatch.response;
+                    }
+
+                    return null;
+                } catch (error) {
+                    console.error('查找相似缓存失败:', error);
+                    return null;
+                }
+            }
+        }       
+ // API服务类
+        class APIService {
+            constructor(apiKey) {
+                this.apiKey = apiKey;
+                this.baseURL = API_URL;
+                this.model = 'qwen-turbo';
+                this.mockMode = false;
+                this.proxyMode = false;
+                this.proxyURL = 'http://localhost:3000/api/proxy';
+            }
+
+            async sendMessage(userMessage, conversationHistory = []) {
+                try {
+                    // 首先检查缓存
+                    if (cacheManager) {
+                        const cachedResponse = cacheManager.getCache(userMessage);
+                        if (cachedResponse) {
+                            return {
+                                content: cachedResponse + '\n\n💾 *此回复来自缓存*',
+                                finishReason: 'stop',
+                                fromCache: true
+                            };
+                        }
+
+                        // 如果没有完全匹配，尝试查找相似的缓存
+                        const similarResponse = cacheManager.findSimilarCache(userMessage);
+                        if (similarResponse) {
+                            return {
+                                content: similarResponse + '\n\n💾 *此回复来自相似问题的缓存*',
+                                finishReason: 'stop',
+                                fromCache: true
+                            };
+                        }
+                    }
+
+                    let response;
+                    if (this.mockMode) {
+                        response = await this.getMockResponse(userMessage);
+                    } else {
+                        const messages = this.buildMessageHistory(userMessage, conversationHistory);
+                        const requestBody = {
+                            model: this.model,
+                            input: { messages: messages },
+                            parameters: {
+                                temperature: 0.7,
+                                max_tokens: 2000
+                            }
+                        };
+
+                        const apiResponse = await this.makeRequest(requestBody);
+                        response = this.parseResponse(apiResponse);
+                    }
+
+                    // 将回复存入缓存
+                    if (cacheManager && response.content) {
+                        cacheManager.setCache(userMessage, response.content);
+                    }
+
+                    return response;
+                } catch (error) {
+                    console.error('API调用失败:', error);
+                    if (error.message.includes('CORS') || error.message.includes('Failed to fetch') || error.message.includes('网络')) {
+                        console.log('检测到CORS错误，自动切换到模拟模式');
+                        this.mockMode = true;
+                        const response = await this.getMockResponse(userMessage);
+                        
+                        // 即使是模拟模式的回复也要缓存
+                        if (cacheManager && response.content) {
+                            cacheManager.setCache(userMessage, response.content);
+                        }
+                        
+                        return response;
+                    }
+                    throw error;
+                }
+            }
+
+            buildMessageHistory(userMessage, conversationHistory) {
+                const messages = [
+                    {
+                        role: "system",
+                        content: "你是一个专业的编程助手，专门帮助开发者解决编程问题。你的回答应该准确、详细，并且包含实用的代码示例。"
+                    }
+                ];
+
+                const recentHistory = conversationHistory.slice(-10);
+                recentHistory.forEach(msg => {
+                    if (msg.role === 'user' || msg.role === 'assistant') {
+                        messages.push({
+                            role: msg.role,
+                            content: msg.content
+                        });
+                    }
+                });
+
+                messages.push({
+                    role: "user",
+                    content: userMessage
+                });
+
+                return messages;
+            }
+
+            async makeRequest(requestBody) {
+                let url, options;
+
+                if (this.proxyMode) {
+                    // 使用代理模式
+                    url = this.proxyURL;
+                    options = {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            headers: {
+                                'Authorization': `Bearer ${this.apiKey}`
+                            },
+                            body: requestBody
+                        })
+                    };
+                } else {
+                    // 直接调用API
+                    url = this.baseURL;
+                    options = {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.apiKey}`,
+                            'X-DashScope-SSE': 'disable'
+                        },
+                        body: JSON.stringify(requestBody)
+                    };
+                }
+
+                const response = await fetch(url, options);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return await response.json();
+            }
+
+            parseResponse(response) {
+                console.log('🔍 API响应数据:', response);
+                
+                // 检查是否是错误响应
+                if (response.error) {
+                    throw new Error(`API错误: ${response.error}`);
+                }
+                
+                if (!response.output) {
+                    console.error('❌ API响应格式无效:', response);
+                    throw new Error('API响应格式无效');
+                }
+
+                // 支持新的API响应格式（直接在output中有text字段）
+                if (response.output.text) {
+                    return {
+                        content: response.output.text.trim(),
+                        finishReason: response.output.finish_reason || 'stop'
+                    };
+                }
+
+                // 支持旧的API响应格式（choices数组格式）
+                if (response.output.choices && response.output.choices.length > 0) {
+                    const choice = response.output.choices[0];
+                    if (choice.message && choice.message.content) {
+                        return {
+                            content: choice.message.content.trim(),
+                            finishReason: choice.finish_reason || 'stop'
+                        };
+                    }
+                }
+
+                console.error('❌ API响应内容为空:', response.output);
+                throw new Error('API响应内容为空');
+            }
+
+            async getMockResponse(userMessage) {
+                await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+
+                // 智能识别用户问题类型
+                const message = userMessage.toLowerCase();
+                let responseType = 'general';
+                
+                // 编程相关关键词
+                if (message.includes('代码') || message.includes('编程') || message.includes('函数') || 
+                    message.includes('算法') || message.includes('bug') || message.includes('错误') ||
+                    message.includes('javascript') || message.includes('python') || message.includes('java') ||
+                    message.includes('html') || message.includes('css') || message.includes('react') ||
+                    message.includes('vue') || message.includes('node') || message.includes('数据库') ||
+                    message.includes('sql') || message.includes('api') || message.includes('框架')) {
+                    responseType = 'programming';
+                }
+                // 笑话相关关键词
+                else if (message.includes('笑话') || message.includes('搞笑') || message.includes('幽默') ||
+                         message.includes('joke') || message.includes('funny')) {
+                    responseType = 'joke';
+                }
+                // 问候相关关键词
+                else if (message.includes('你好') || message.includes('hello') || message.includes('hi') ||
+                         message.includes('早上好') || message.includes('晚上好') || message.includes('怎么样')) {
+                    responseType = 'greeting';
+                }
+                // 聊天相关关键词
+                else if (message.includes('聊天') || message.includes('谈话') || message.includes('说说') ||
+                         message.includes('介绍') || message.includes('是什么') || message.includes('告诉我')) {
+                    responseType = 'chat';
+                }
+
+                const mockResponses = {
+                    programming: [
+                        "这是一个很好的编程问题！让我来帮你分析一下：\n\n```javascript\n// 示例：异步函数处理\nasync function fetchData(url) {\n    try {\n        const response = await fetch(url);\n        const data = await response.json();\n        return data;\n    } catch (error) {\n        console.error('获取数据失败:', error);\n        throw error;\n    }\n}\n```\n\n这个解决方案使用了 `async/await` 语法，提供了更好的错误处理机制。",
+                        
+                        "根据你的问题，我建议使用以下方法：\n\n**算法思路：**\n1. 首先分析问题的核心需求\n2. 选择合适的数据结构\n3. 实现算法逻辑\n\n```python\n# Python示例：快速排序算法\ndef quicksort(arr):\n    if len(arr) <= 1:\n        return arr\n    \n    pivot = arr[len(arr) // 2]\n    left = [x for x in arr if x < pivot]\n    middle = [x for x in arr if x == pivot]\n    right = [x for x in arr if x > pivot]\n    \n    return quicksort(left) + middle + quicksort(right)\n```\n\n时间复杂度：平均 O(n log n)，最坏 O(n²)",
+                        
+                        "让我为你展示一个完整的解决方案：\n\n```html\n<!-- HTML结构 -->\n<div class=\"container\">\n    <h1>我的应用</h1>\n    <button onclick=\"handleClick()\">点击我</button>\n</div>\n```\n\n```css\n/* CSS样式 */\n.container {\n    max-width: 800px;\n    margin: 0 auto;\n    padding: 20px;\n    text-align: center;\n}\n\nbutton {\n    background: #007bff;\n    color: white;\n    border: none;\n    padding: 10px 20px;\n    border-radius: 5px;\n    cursor: pointer;\n}\n```\n\n```javascript\n// JavaScript逻辑\nfunction handleClick() {\n    alert('按钮被点击了！');\n}\n```"
+                    ],
+                    joke: [
+                        "哈哈，来个程序员笑话：\n\n为什么程序员总是分不清万圣节和圣诞节？\n\n因为 Oct 31 == Dec 25！\n\n(八进制的31等于十进制的25) 😄",
+                        
+                        "给你讲个编程笑话：\n\n一个程序员走进酒吧，要了1杯啤酒、2杯啤酒、0杯啤酒、-1杯啤酒、NULL杯啤酒、一个字符串杯啤酒、DROP TABLE啤酒...\n\n酒保说：\"我觉得你测试得差不多了。\"\n\n然后一个顾客走进来，问厕所在哪里，酒吧崩溃了。😂",
+                        
+                        "程序员的幽默：\n\n老婆给程序员老公打电话：\"下班顺路买一斤包子带回来，如果看到卖西瓜的，买一个。\"\n\n当晚，程序员老公手捧一个包子进了家门...\n\n老婆怒道：\"你怎么就买了一个包子？！\"\n\n老公答曰：\"因为看到了卖西瓜的。\" 🤣",
+                        
+                        "来个轻松的：\n\n为什么程序员喜欢黑暗？\n\n因为光会产生bug！(light -> bug) 🐛\n\n还有一个：程序员最讨厌的事情是什么？\n答：有两件事，一是别人不写注释，二是别人要求自己写注释。😅"
+                    ],
+                    greeting: [
+                        "你好！👋 我是你的AI编程助手，很高兴见到你！\n\n我可以帮助你：\n• 解决编程问题\n• 分析代码错误\n• 提供算法建议\n• 讲讲程序员笑话\n• 或者就是简单聊聊天\n\n有什么我可以帮助你的吗？",
+                        
+                        "嗨！😊 欢迎来到编程助手！\n\n今天过得怎么样？有什么有趣的编程项目在做吗？\n\n不管是技术问题还是想聊聊天，我都很乐意陪你！",
+                        
+                        "Hello！🤖 很高兴认识你！\n\n我是专门为程序员设计的AI助手，但我也喜欢聊天、讲笑话。\n\n今天想聊什么呢？编程、技术、还是生活趣事？"
+                    ],
+                    chat: [
+                        "我是一个专门为程序员设计的AI助手！🤖\n\n虽然我主要专长是编程相关的问题，但我也很喜欢：\n• 和大家聊天交流\n• 分享有趣的技术见解\n• 讲程序员笑话\n• 讨论科技趋势\n\n我的目标是让编程变得更有趣、更容易！你呢？正在学习什么技术吗？",
+                        
+                        "聊天当然可以！😄\n\n我虽然是个编程助手，但我觉得技术和生活是相通的。编程教会了我逻辑思维，但和人交流让我学会了理解和共情。\n\n你平时除了编程还有什么爱好吗？我发现很多程序员都有很有趣的业余爱好！",
+                        
+                        "很乐意和你聊天！💬\n\n你知道吗？我最喜欢的就是帮助大家解决问题的那一刻，就像调试代码时突然发现bug在哪里的感觉！\n\n说说你最近在做什么有趣的项目吧？或者有什么想了解的技术？"
+                    ],
+                    general: [
+                        "我是你的AI编程助手！虽然我主要专长是编程，但我也很乐意和你聊天。😊\n\n我可以：\n• 帮你解决编程问题\n• 分析代码和算法\n• 讲技术笑话\n• 简单聊天交流\n\n有什么我可以帮助你的吗？",
+                        
+                        "有趣的问题！🤔 虽然我主要是编程助手，但我也喜欢各种话题。\n\n不过我最擅长的还是：\n• 编程技术问题\n• 代码调试\n• 算法设计\n• 技术学习建议\n\n如果你有编程相关的问题，我会特别兴奋！当然，其他话题我也很乐意聊。",
+                        
+                        "感谢你的问题！😄 我会尽力回答。\n\n作为编程助手，我最喜欢帮助大家解决技术难题，但我也享受轻松的聊天时光。\n\n你今天想聊什么呢？技术问题、学习建议，还是想听个程序员笑话？"
+                    ]
+                };
+
+                const responses = mockResponses[responseType];
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                
+                return {
+                    content: `[模拟模式] ${randomResponse}`,
+                    finishReason: 'stop'
+                };
+            }
+
+            toggleMockMode() {
+                this.mockMode = !this.mockMode;
+                return this.mockMode;
+            }
+
+            toggleProxyMode() {
+                this.proxyMode = !this.proxyMode;
+                return this.proxyMode;
+            }
+
+            async testProxyConnection() {
+                try {
+                    const healthUrl = this.proxyURL.replace('/api/proxy', '/health');
+                    const response = await fetch(healthUrl, {
+                        method: 'GET'
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('代理服务器健康检查:', data);
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    console.error('代理服务器连接测试失败:', error);
+                    return false;
+                }
+            }
+        } 
+       // UI渲染函数
+        function renderMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${message.role}`;
+            messageDiv.setAttribute('data-message-id', message.id);
+            messageDiv.setAttribute('data-status', message.status);
+
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = message.role === 'user' ? '你' : 'AI';
+
+            const messageText = document.createElement('div');
+            messageText.className = 'message-text';
+            messageText.innerHTML = formatMessageContent(message.content);
+
+            const messageTime = document.createElement('div');
+            messageTime.className = 'message-time';
+            messageTime.textContent = message.getFormattedTime();
+
+            messageContent.appendChild(avatar);
+            messageContent.appendChild(messageText);
+            messageDiv.appendChild(messageContent);
+            messageDiv.appendChild(messageTime);
+
+            // 移除欢迎消息
+            const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+
+            messagesContainer.appendChild(messageDiv);
+            addCopyCodeButtons(messageDiv);
+            scrollToBottom();
+            
+            return messageDiv;
+        }
+
+        function formatMessageContent(content) {
+            let formatted = content
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+
+            // 处理代码块
+            formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (match, language, code) => {
+                const lang = language || 'text';
+                return `<div class="code-block">
+                    <div class="code-header">
+                        <span class="code-language">${lang}</span>
+                        <button class="copy-code-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code>${code.trim()}</code></pre>
+                </div>`;
+            });
+
+            // 处理行内代码
+            formatted = formatted.replace(/`([^`]+)`/g, '<span class="inline-code">$1</span>');
+
+            // 处理链接
+            formatted = formatted.replace(
+                /(https?:\/\/[^\s]+)/g,
+                '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+            );
+
+            // 处理粗体和斜体
+            formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+            // 处理换行
+            formatted = formatted.replace(/\n/g, '<br>');
+
+            return formatted;
+        }
+
+        function addCopyCodeButtons(messageDiv) {
+            const codeBlocks = messageDiv.querySelectorAll('.code-block');
+            codeBlocks.forEach(block => {
+                const copyBtn = block.querySelector('.copy-code-btn');
+                if (copyBtn) {
+                    copyBtn.addEventListener('click', () => copyCode(copyBtn));
+                }
+            });
+        }
+
+        function copyCode(button) {
+            const codeBlock = button.closest('.code-block');
+            const code = codeBlock.querySelector('code').textContent;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = button.textContent;
+                button.textContent = '已复制';
+                button.style.color = '#10a37f';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.color = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                showErrorMessage('复制失败，请手动选择代码');
+            });
+        }
+
+        function updateMessageStatus(messageId, status) {
+            const messageDiv = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageDiv) {
+                messageDiv.setAttribute('data-status', status);
+                if (status === 'sent') {
+                    messageDiv.style.opacity = '1';
+                } else if (status === 'error') {
+                    messageDiv.style.opacity = '0.6';
+                    const textDiv = messageDiv.querySelector('.message-text');
+                    textDiv.style.borderLeft = '3px solid #dc2626';
+                }
+            }
+        }
+
+        function scrollToBottom() {
+            messagesContainer.scrollTo({
+                top: messagesContainer.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+
+        function clearMessagesUI() {
+            const messages = messagesContainer.querySelectorAll('.message');
+            messages.forEach(msg => msg.remove());
+            showWelcomeMessage();
+        }
+
+        function showWelcomeMessage() {
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'welcome-message';
+            welcomeDiv.innerHTML = `
+                <h2>欢迎使用编程助手！</h2>
+                <p>我是你的专属编程助手，可以帮助你解决各种编程问题、代码调试、算法设计等。请随时向我提问！</p>
+            `;
+            messagesContainer.appendChild(welcomeDiv);
+        }
+
+        function renderHistoryMessages() {
+            const messages = messageManager.getMessages();
+            messages.forEach(message => {
+                renderMessage(message);
+            });
+        }
+
+        function setSendButtonState(enabled) {
+            sendButton.disabled = !enabled;
+            sendButton.style.backgroundColor = enabled ? '#10a37f' : '#d1d5db';
+            sendButton.style.cursor = enabled ? 'pointer' : 'not-allowed';
+        }
+
+        function showLoadingIndicator() {
+            loadingIndicator.style.display = 'block';
+            scrollToBottom();
+        }
+
+        function hideLoadingIndicator() {
+            loadingIndicator.style.display = 'none';
+        }
+
+        function showErrorMessage(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
+        }
+
+        function showSuccessMessage(message) {
+            const successDiv = document.createElement('div');
+            successDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background-color: #10a37f;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 6px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 1000;
+                font-size: 14px;
+            `;
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+        }
+
+        function showMockModeNotice() {
+            const noticeDiv = document.createElement('div');
+            noticeDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: #f59e0b;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 6px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 1000;
+                font-size: 14px;
+                max-width: 400px;
+                text-align: center;
+            `;
+            noticeDiv.innerHTML = `
+                <div>🤖 模拟模式已启用</div>
+                <div style="font-size: 12px; margin-top: 4px;">
+                    由于网络限制，现在使用模拟回复。功能完全正常！
+                </div>
+            `;
+            document.body.appendChild(noticeDiv);
+            
+            setTimeout(() => {
+                noticeDiv.remove();
+            }, 5000);
+        }
+
+        function showProxyModeNotice() {
+            const noticeDiv = document.createElement('div');
+            noticeDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: #3b82f6;
+                color: white;
+                padding: 12px 20px;
+                border-radius: 6px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 1000;
+                font-size: 14px;
+                max-width: 400px;
+                text-align: center;
+            `;
+            noticeDiv.innerHTML = `
+                <div>🚀 代理模式已启用</div>
+                <div style="font-size: 12px; margin-top: 4px;">
+                    全血模式！现在可以使用真实API进行对话了！
+                </div>
+            `;
+            document.body.appendChild(noticeDiv);
+            
+            setTimeout(() => {
+                noticeDiv.remove();
+            }, 5000);
+        }     
+   // 核心功能函数
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || isLoading) return;
+
+            let userMessage = null;
+
+            try {
+                isLoading = true;
+                setSendButtonState(false);
+                
+                // 清空输入框
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
+
+                // 添加用户消息
+                userMessage = messageManager.addMessage('user', message, 'sending');
+                renderMessage(userMessage);
+
+                // 显示加载指示器
+                showLoadingIndicator();
+
+                // 获取对话历史
+                const conversationHistory = messageManager.getMessages().filter(msg => msg.id !== userMessage.id);
+
+                // 调用API
+                const response = await apiService.sendMessage(message, conversationHistory);
+
+                // 更新用户消息状态
+                messageManager.updateMessageStatus(userMessage.id, 'sent');
+                updateMessageStatus(userMessage.id, 'sent');
+
+                // 隐藏加载指示器
+                hideLoadingIndicator();
+
+                // 添加AI回复
+                const assistantMessage = messageManager.addMessage('assistant', response.content);
+                renderMessage(assistantMessage);
+
+            } catch (error) {
+                console.error('发送消息失败:', error);
+                
+                hideLoadingIndicator();
+                
+                if (userMessage) {
+                    messageManager.updateMessageStatus(userMessage.id, 'error');
+                    updateMessageStatus(userMessage.id, 'error');
+                }
+
+                let errorMsg = '发送失败，请重试';
+                if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+                    errorMsg = '检测到网络限制，已自动切换到模拟模式。请点击"模拟模式"按钮查看状态。';
+                    // 自动启用模拟模式
+                    apiService.mockMode = true;
+                    updateMockModeButton();
+                } else if (error.message.includes('网络')) {
+                    errorMsg = '网络连接失败，请检查网络设置';
+                } else if (error.message.includes('API')) {
+                    errorMsg = 'API调用失败，已切换到模拟模式';
+                }
+                
+                showErrorMessage(errorMsg);
+            } finally {
+                isLoading = false;
+                setSendButtonState(true);
+                messageInput.focus();
+            }
+        }
+
+        function clearHistory() {
+            if (confirm('确定要清除所有历史记录吗？此操作不可撤销。')) {
+                messageManager.clearMessages();
+                clearMessagesUI();
+                showSuccessMessage('历史记录已清除');
+            }
+        }
+
+        function exportConversation() {
+            try {
+                const exportData = messageManager.exportConversation();
+                if (exportData) {
+                    const blob = new Blob([exportData], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `编程助手对话记录_${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    showSuccessMessage('对话记录已导出');
+                } else {
+                    showErrorMessage('导出失败，暂无对话记录');
+                }
+            } catch (error) {
+                console.error('导出对话失败:', error);
+                showErrorMessage('导出对话失败');
+            }
+        }
+
+        function handleImportFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const jsonData = e.target.result;
+                    
+                    if (confirm('导入对话将覆盖当前的历史记录，确定要继续吗？')) {
+                        const success = messageManager.importConversation(jsonData);
+                        if (success) {
+                            clearMessagesUI();
+                            renderHistoryMessages();
+                            showSuccessMessage('对话记录导入成功');
+                        } else {
+                            showErrorMessage('导入失败，文件格式可能不正确');
+                        }
+                    }
+                } catch (error) {
+                    console.error('导入文件处理失败:', error);
+                    showErrorMessage('导入失败：' + error.message);
+                }
+                
+                event.target.value = '';
+            };
+            
+            reader.onerror = function() {
+                showErrorMessage('文件读取失败');
+                event.target.value = '';
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function showStats() {
+            const stats = messageManager.getMessageStats();
+            const cacheStats = cacheManager ? cacheManager.getCacheStats() : null;
+            
+            let statsMessage = `📊 对话统计信息\n\n`;
+            statsMessage += `💬 消息统计：\n`;
+            statsMessage += `- 总消息数：${stats.totalMessages}\n`;
+            statsMessage += `- 用户消息：${stats.userMessages}\n`;
+            statsMessage += `- AI回复：${stats.assistantMessages}\n\n`;
+            
+            if (cacheStats) {
+                statsMessage += `💾 缓存统计：\n`;
+                statsMessage += `- 缓存项目：${cacheStats.totalItems}\n`;
+                statsMessage += `- 缓存大小：${cacheStats.totalSize} KB\n`;
+                statsMessage += `- 总访问次数：${cacheStats.totalAccessCount}\n`;
+                if (cacheStats.newestItem) {
+                    statsMessage += `- 最新缓存：${cacheStats.newestItem.question}\n`;
+                }
+            }
+            
+            alert(statsMessage);
+        }
+
+        function showCacheManager() {
+            const cacheStats = cacheManager.getCacheStats();
+            
+            let cacheMessage = `💾 缓存管理\n\n`;
+            cacheMessage += `📈 缓存统计：\n`;
+            cacheMessage += `- 缓存项目数：${cacheStats.totalItems}\n`;
+            cacheMessage += `- 缓存大小：${cacheStats.totalSize} KB\n`;
+            cacheMessage += `- 总访问次数：${cacheStats.totalAccessCount}\n\n`;
+            
+            if (cacheStats.oldestItem) {
+                cacheMessage += `⏰ 最旧缓存：\n`;
+                cacheMessage += `- 问题：${cacheStats.oldestItem.question}\n`;
+                cacheMessage += `- 时间：${cacheStats.oldestItem.timestamp}\n\n`;
+            }
+            
+            if (cacheStats.newestItem) {
+                cacheMessage += `🆕 最新缓存：\n`;
+                cacheMessage += `- 问题：${cacheStats.newestItem.question}\n`;
+                cacheMessage += `- 时间：${cacheStats.newestItem.timestamp}\n\n`;
+            }
+            
+            cacheMessage += `🔧 操作选项：\n`;
+            cacheMessage += `1. 查看详细信息\n`;
+            cacheMessage += `2. 清空所有缓存\n`;
+            cacheMessage += `3. 取消\n\n`;
+            cacheMessage += `请输入选项编号：`;
+            
+            const choice = prompt(cacheMessage);
+            
+            switch(choice) {
+                case '1':
+                    showDetailedCacheInfo();
+                    break;
+                case '2':
+                    if (confirm('确定要清空所有缓存吗？此操作不可撤销。')) {
+                        cacheManager.clearCache();
+                        showSuccessMessage('缓存已清空');
+                    }
+                    break;
+                case '3':
+                default:
+                    break;
+            }
+        }
+
+        function showDetailedCacheInfo() {
+            const cacheStats = cacheManager.getCacheStats();
+            
+            const detailWindow = window.open('', '_blank', 'width=600,height=500,scrollbars=yes');
+            detailWindow.document.write(`
+                <html>
+                <head>
+                    <title>缓存详细信息</title>
+                    <style>
+                        body { 
+                            font-family: monospace; 
+                            padding: 20px; 
+                            background: #f5f5f5; 
+                            line-height: 1.6;
+                        }
+                        .container {
+                            background: white;
+                            padding: 20px;
+                            border-radius: 8px;
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        }
+                        .stat-item {
+                            margin: 10px 0;
+                            padding: 10px;
+                            background: #f8f9fa;
+                            border-radius: 4px;
+                        }
+                        .clear-btn {
+                            background: #dc3545;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            margin-top: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h2>💾 缓存详细信息</h2>
+                        
+                        <div class="stat-item">
+                            <strong>📊 基本统计</strong><br>
+                            缓存项目数：${cacheStats.totalItems}<br>
+                            缓存大小：${cacheStats.totalSize} KB<br>
+                            总访问次数：${cacheStats.totalAccessCount}
+                        </div>
+                        
+                        ${cacheStats.oldestItem ? `
+                        <div class="stat-item">
+                            <strong>⏰ 最旧缓存</strong><br>
+                            问题：${cacheStats.oldestItem.question}<br>
+                            创建时间：${cacheStats.oldestItem.timestamp}
+                        </div>
+                        ` : ''}
+                        
+                        ${cacheStats.newestItem ? `
+                        <div class="stat-item">
+                            <strong>🆕 最新缓存</strong><br>
+                            问题：${cacheStats.newestItem.question}<br>
+                            创建时间：${cacheStats.newestItem.timestamp}
+                        </div>
+                        ` : ''}
+                        
+                        <div class="stat-item">
+                            <strong>💡 缓存说明</strong><br>
+                            • 缓存会自动保存AI的回复，提高响应速度<br>
+                            • 相似问题会复用缓存回复<br>
+                            • 缓存24小时后自动过期<br>
+                            • 最多保存50个缓存项目
+                        </div>
+                        
+                        <button class="clear-btn" onclick="if(confirm('确定清空所有缓存？')) { 
+                            window.opener.cacheManager.clearCache(); 
+                            window.opener.showSuccessMessage('缓存已清空'); 
+                            window.close(); 
+                        }">清空所有缓存</button>
+                    </div>
+                </body>
+                </html>
+            `);
+        }
+
+        function toggleMockMode() {
+            const isEnabled = apiService.toggleMockMode();
+            updateMockModeButton();
+            const status = isEnabled ? '已启用' : '已禁用';
+            showSuccessMessage(`模拟模式${status}`);
+        }
+
+        function updateMockModeButton() {
+            if (apiService.mockMode) {
+                mockModeButton.textContent = '模拟模式 ✓';
+                mockModeButton.style.backgroundColor = '#10a37f';
+                mockModeButton.style.color = 'white';
+                mockModeButton.style.borderColor = '#10a37f';
+            } else {
+                mockModeButton.textContent = '模拟模式';
+                mockModeButton.style.backgroundColor = 'transparent';
+                mockModeButton.style.color = '#6b7280';
+                mockModeButton.style.borderColor = '#d1d5db';
+            }
+        }
+
+        function updateProxyModeButton() {
+            if (apiService.proxyMode) {
+                proxyModeButton.textContent = '代理模式 ✓';
+                proxyModeButton.style.backgroundColor = '#3b82f6';
+                proxyModeButton.style.color = 'white';
+                proxyModeButton.style.borderColor = '#3b82f6';
+            } else {
+                proxyModeButton.textContent = '代理模式';
+                proxyModeButton.style.backgroundColor = 'transparent';
+                proxyModeButton.style.color = '#6b7280';
+                proxyModeButton.style.borderColor = '#d1d5db';
+            }
+        }
+
+        async function toggleProxyMode() {
+            if (!apiService.proxyMode) {
+                // 尝试启用代理模式前先测试连接
+                const isProxyAvailable = await apiService.testProxyConnection();
+                if (!isProxyAvailable) {
+                    alert('⚠️ 代理服务器未运行！\n\n请先启动代理服务器：\n1. 确保已安装 Node.js\n2. 在项目目录运行: node proxy-server.js\n3. 或双击 start-server.bat 文件\n\n代理服务器地址: http://localhost:3000');
+                    return;
+                }
+                
+                // 禁用模拟模式
+                if (apiService.mockMode) {
+                    apiService.mockMode = false;
+                    updateMockModeButton();
+                }
+            }
+            
+            const isEnabled = apiService.toggleProxyMode();
+            updateProxyModeButton();
+            
+            const status = isEnabled ? '已启用' : '已禁用';
+            showSuccessMessage(`代理模式${status}`);
+            
+            if (isEnabled) {
+                showSuccessMessage('🚀 全血模式已启用！现在可以直接调用真实API了！');
+            }
+        }
+
+        function showKeyboardShortcuts() {
+            const shortcuts = `
+⌨️ 键盘快捷键
+
+📝 消息操作：
+• Ctrl + Enter    发送消息
+• 任意字母键      聚焦到输入框
+
+📁 历史记录：
+• Ctrl + K        清除历史记录
+• Ctrl + E        导出对话记录
+• Ctrl + I        导入对话记录
+• Ctrl + S        显示统计信息
+
+🔧 界面操作：
+• Escape          取消操作/隐藏提示
+• Ctrl + /        显示此帮助
+
+💡 提示：
+• 在输入框中按 Ctrl+Enter 发送消息
+• 按任意字母键可快速聚焦到输入框
+            `.trim();
+
+            alert(shortcuts);
+        }   
+     // 事件监听器
+        function setupEventListeners() {
+            // 自动调整输入框高度
+            messageInput.addEventListener('input', function () {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 192) + 'px';
+            });
+
+            // 键盘快捷键
+            messageInput.addEventListener('keydown', function (e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // 全局键盘快捷键
+            document.addEventListener('keydown', function (e) {
+                if (e.ctrlKey && e.key === 'k') {
+                    e.preventDefault();
+                    clearHistory();
+                } else if (e.ctrlKey && e.key === 'e') {
+                    e.preventDefault();
+                    exportConversation();
+                } else if (e.ctrlKey && e.key === 'i') {
+                    e.preventDefault();
+                    importFileInput.click();
+                } else if (e.ctrlKey && e.key === 's') {
+                    e.preventDefault();
+                    showStats();
+                } else if (e.key === 'Escape') {
+                    errorMessage.style.display = 'none';
+                } else if (e.ctrlKey && e.key === '/') {
+                    e.preventDefault();
+                    showKeyboardShortcuts();
+                } else if (!e.ctrlKey && !e.altKey && !e.metaKey && 
+                          e.key.length === 1 && e.key.match(/[a-zA-Z0-9\u4e00-\u9fa5]/) &&
+                          document.activeElement !== messageInput) {
+                    messageInput.focus();
+                }
+            });
+
+            // 按钮事件
+            sendButton.addEventListener('click', sendMessage);
+            clearButton.addEventListener('click', clearHistory);
+            exportButton.addEventListener('click', exportConversation);
+            importButton.addEventListener('click', () => importFileInput.click());
+            statsButton.addEventListener('click', showStats);
+            cacheButton.addEventListener('click', showCacheManager);
+            proxyModeButton.addEventListener('click', toggleProxyMode);
+            mockModeButton.addEventListener('click', toggleMockMode);
+            helpButton.addEventListener('click', showKeyboardShortcuts);
+            importFileInput.addEventListener('change', handleImportFile);
+        }
+
+        // 应用初始化
+        function initializeApp() {
+            try {
+                console.log('🚀 初始化编程助手应用...');
+
+                // 初始化服务
+                messageManager = new MessageManager();
+                apiService = new APIService(API_KEY);
+                cacheManager = new CacheManager();
+
+                // 检查访问方式并自动设置模式
+                if (window.location.protocol === 'file:') {
+                    // 本地文件访问，启用模拟模式
+                    apiService.mockMode = true;
+                    console.log('检测到本地文件访问，自动启用模拟模式');
+                    setTimeout(() => {
+                        showMockModeNotice();
+                    }, 1000);
+                } else if (window.location.hostname === 'localhost' && window.location.port === '3000') {
+                    // localhost:3000访问，启用代理模式
+                    apiService.proxyMode = true;
+                    console.log('检测到代理服务器访问，自动启用代理模式');
+                    setTimeout(() => {
+                        showProxyModeNotice();
+                    }, 1000);
+                }
+
+                // 设置事件监听器
+                setupEventListeners();
+
+                // 渲染历史消息
+                renderHistoryMessages();
+
+                // 如果没有历史消息，显示欢迎信息
+                if (messageManager.getMessages().length === 0) {
+                    showWelcomeMessage();
+                }
+
+                // 更新按钮状态
+                updateMockModeButton();
+                updateProxyModeButton();
+
+                // 聚焦到输入框
+                messageInput.focus();
+
+                console.log('✅ 应用初始化完成');
+
+            } catch (error) {
+                console.error('❌ 应用初始化失败:', error);
+                showErrorMessage('应用初始化失败，请刷新页面重试');
+            }
+        }
+
+        // 页面加载完成后初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        } else {
+            initializeApp();
+        }
+
+        // 页面卸载前保存数据
+        window.addEventListener('beforeunload', () => {
+            if (messageManager) {
+                messageManager.saveConversation();
+            }
+        });
+
+    </script>
+</body>
+</html>
